@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { THEME, CATEGORIES, INCOME_CATEGORIES } from '../constants/theme';
 
-export default function AddTransactionModal({ visible, onClose, onSave, initialData }) {
+export default function AddTransactionModal({ visible, onClose, onSave, initialData, categories, incomeCategories }) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('expense'); 
@@ -58,7 +58,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setIsShared(false);
     setMyPart('');
     setDate(new Date());
-    setCategory(type === 'expense' ? 'Comida' : 'Nómina');
+    setCategory(type === 'expense' ? (categories[0]?.id || '') : (incomeCategories[0]?.id || ''));
   };
 
   return (
@@ -133,7 +133,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             {/* Category selection */}
             <Text style={styles.label}>Categoría</Text>
             <View style={styles.categoryGrid}>
-              {(type === 'expense' ? CATEGORIES : INCOME_CATEGORIES).map(cat => (
+              {(type === 'expense' ? categories : incomeCategories).map(cat => (
                 <TouchableOpacity 
                   key={cat.id} 
                   style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}

@@ -281,7 +281,29 @@ const styles = StyleSheet.create({
     flex: 2,
     textAlign: 'right',
     fontWeight: '600',
-  }
+  },
+  transactionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.colors.background,
+    padding: 16,
+    borderRadius: 22,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  txIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  txDate: {
+    color: THEME.colors.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
 });
 
 const getCategoryColor = (catId, type, categories, incomeCategories) => {

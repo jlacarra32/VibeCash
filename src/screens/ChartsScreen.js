@@ -99,7 +99,7 @@ export default function ChartsScreen({ transactions, categories }) {
           </View>
 
           <View style={styles.legendContainer}>
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <View key={cat.id} style={styles.legendTag}>
                 <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
                 <Text style={styles.legendName}>{cat.id}</Text>
@@ -111,7 +111,7 @@ export default function ChartsScreen({ transactions, categories }) {
         {displayExpense > 0 && (
           <View style={styles.listSection}>
             <Text style={styles.sectionTitle}>Distribución Mensual</Text>
-            {CATEGORIES.map(cat => {
+            {categories.map(cat => {
               const amountFloat = displayCategories[cat.id] || 0;
               if (amountFloat <= 0) return null;
               const percentage = ((amountFloat / displayExpense) * 100).toFixed(0);

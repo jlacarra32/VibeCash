@@ -3,7 +3,15 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView 
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 
-export default function ProfileScreen({ userName, setUserName, setTransactions }) {
+export default function ProfileScreen({ 
+  userName, 
+  setUserName, 
+  setTransactions, 
+  categories, 
+  setCategories, 
+  incomeCategories, 
+  setIncomeCategories 
+}) {
   const [tempName, setTempName] = useState(userName || '');
 
   const handleUpdate = () => {
