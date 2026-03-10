@@ -2,11 +2,19 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Animated, ScrollView, Platform, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME, CATEGORIES, INCOME_CATEGORIES } from '../constants/theme';
+import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 
-export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName }) {
-  const [timeFilter, setTimeFilter] = useState('month'); // 'month' por defecto como pidió el usuario
+export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories }) {
+  const [timeFilter, setTimeFilter] = useState('month');
+  const balanceAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(balanceAnim, { toValue: 0.5, duration: 100, useNativeDriver: true }),
+      Animated.timing(balanceAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, [timeFilter, transactions]);
 
   const handleResetData = () => {
     Alert.alert(
@@ -35,13 +43,13 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
   };
 
   const getCategoryIcon = (catId, type) => {
-    const list = type === 'income' ? INCOME_CATEGORIES : CATEGORIES;
+    const list = type === 'income' ? incomeCategories : categories;
     const cat = list.find(c => c.id === catId);
     return cat ? cat.icon : 'cash-outline';
   };
 
   const getCategoryColor = (catId, type) => {
-    const list = type === 'income' ? INCOME_CATEGORIES : CATEGORIES;
+    const list = type === 'income' ? incomeCategories : categories;
     const cat = list.find(c => c.id === catId);
     return cat ? cat.color : THEME.colors.textSecondary;
   };
@@ -62,8 +70,12 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
         {/* Giant Balance Hero */}
         <View style={styles.balanceHero}>
-          <Text style={styles.heroLabel}>Balance del Mes</Text>
-          <Text style={styles.heroAmount}>{cashFlow.netBalance.toFixed(2)}€</Text>
+          <Text style={styles.heroLabel}>
+            Balance {timeFilter === 'all' ? 'Total' : timeFilter === 'week' ? 'de la Semana' : timeFilter === 'month' ? 'del Mes' : 'del Año'}
+          </Text>
+          <Animated.Text style={[styles.heroAmount, { opacity: balanceAnim }]}>
+            {cashFlow.netBalance.toFixed(2)}€
+          </Animated.Text>
           
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>

@@ -13,7 +13,7 @@ LocaleConfig.locales['es'] = {
 };
 LocaleConfig.defaultLocale = 'es';
 
-export default function CalendarScreen({ transactions }) {
+export default function CalendarScreen({ transactions, categories, incomeCategories }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTx, setSelectedTx] = useState(null);
 
@@ -83,14 +83,17 @@ export default function CalendarScreen({ transactions }) {
           dailyTransactions.map(item => (
             <TouchableOpacity 
               key={item.id}
-              style={styles.txItem}
+              style={styles.transactionCard}
               onPress={() => setSelectedTx(item)}
             >
-              <View style={styles.txInfo}>
-                <Text style={styles.txDesc}>{item.description}</Text>
-                <Text style={styles.txCat}>{item.category}</Text>
+              <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(item.category, item.type, categories, incomeCategories) + '15' }]}>
+                <Ionicons name={getCategoryIcon(item.category, item.type, categories, incomeCategories)} size={22} color={getCategoryColor(item.category, item.type, categories, incomeCategories)} />
               </View>
-              <Text style={[styles.txAmount, { color: item.type === 'income' ? THEME.colors.success : THEME.colors.accent }]}>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.txDesc}>{item.description}</Text>
+                <Text style={styles.txDate}>{item.category}</Text>
+              </View>
+              <Text style={[styles.txAmount, { color: item.type === 'income' ? THEME.colors.success : THEME.colors.accent, fontWeight: 'bold' }]}>
                 {item.type === 'income' ? '+' : '-'}{item.amount.toFixed(2)}€
               </Text>
             </TouchableOpacity>
@@ -125,14 +128,22 @@ export default function CalendarScreen({ transactions }) {
                   <Text style={styles.modalValue}>{selectedTx.description}</Text>
                 </View>
                 <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Categoría:</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <Ionicons 
+                      name={getCategoryIcon(selectedTx.category, selectedTx.type, categories, incomeCategories)} 
+                      size={16} 
+                      color={getCategoryColor(selectedTx.category, selectedTx.type, categories, incomeCategories)} 
+                      style={{marginRight: 6}}
+                    />
+                    <Text style={styles.modalValue}>{selectedTx.category}</Text>
+                  </View>
+                </View>
+                <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Importe:</Text>
                   <Text style={[styles.modalValue, { color: selectedTx.type === 'income' ? THEME.colors.success : THEME.colors.accent, fontWeight: 'bold' }]}>
                     {selectedTx.type === 'income' ? '+' : '-'}{selectedTx.amount.toFixed(2)}€
                   </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Categoría:</Text>
-                  <Text style={styles.modalValue}>{selectedTx.category}</Text>
                 </View>
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Tipo:</Text>
@@ -272,3 +283,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   }
 });
+
+const getCategoryColor = (catId, type, categories, incomeCategories) => {
+  const list = type === 'income' ? incomeCategories : categories;
+  const cat = list.find(c => c.id === catId);
+  return cat ? cat.color : THEME.colors.textSecondary;
+};
+
+const getCategoryIcon = (catId, type, categories, incomeCategories) => {
+  const list = type === 'income' ? incomeCategories : categories;
+  const cat = list.find(c => c.id === catId);
+  return cat ? cat.icon : 'cash-outline';
+};

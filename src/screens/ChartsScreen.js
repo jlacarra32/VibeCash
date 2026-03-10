@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME, CATEGORIES } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 
-export default function ChartsScreen({ transactions }) {
+export default function ChartsScreen({ transactions, categories }) {
   const [activeTab, setActiveTab] = useState('real'); // 'real' o 'total'
   const cashFlow = calculateCashFlow(transactions);
 
@@ -80,7 +80,7 @@ export default function ChartsScreen({ transactions }) {
             <View style={styles.columnBox}>
               <View style={styles.barContainer}>
                 <Animated.View style={[styles.barFill, { height: animatedExpenseHeight, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }]}>
-                  {CATEGORIES.map(cat => {
+                  {categories.map(cat => {
                     const amount = displayCategories[cat.id] || 0;
                     if (amount <= 0 || displayExpense <= 0) return null;
                     const partHeight = (amount / displayExpense) * 100;

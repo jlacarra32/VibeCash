@@ -103,11 +103,11 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             <View style={styles.amountGroup}>
               <TextInput 
                 style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                placeholder="Monto"
+                placeholder="0.00"
                 placeholderTextColor="#64748B"
-                keyboardType="numeric"
+                keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
                 value={amount}
-                onChangeText={setAmount}
+                onChangeText={(val) => setAmount(val.replace(',', '.'))}
               />
               {type === 'expense' && (
                 <TouchableOpacity 

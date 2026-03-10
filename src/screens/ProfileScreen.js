@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 
@@ -27,7 +27,7 @@ export default function ProfileScreen({ userName, setUserName, setTransactions }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mi Perfil</Text>
       </View>
@@ -68,13 +68,69 @@ export default function ProfileScreen({ userName, setUserName, setTransactions }
           </TouchableOpacity>
         </View>
 
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Gestión de Categorías</Text>
+          <Text style={styles.subLabel}>Toca una categoría para verla o añade nuevas</Text>
+          
+          <Text style={styles.groupTitle}>Gastos</Text>
+          <View style={styles.categoriesGrid}>
+            {categories.map(cat => (
+              <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
+                <Ionicons name={cat.icon} size={16} color={cat.color} />
+                <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
+                <TouchableOpacity onPress={() => {
+                  setCategories(prev => prev.filter(c => c.id !== cat.id));
+                }}>
+                  <Ionicons name="close-circle" size={18} color={THEME.colors.error} style={{marginLeft: 5}} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <Text style={[styles.groupTitle, {marginTop: 15}]}>Ingresos</Text>
+          <View style={styles.categoriesGrid}>
+            {incomeCategories.map(cat => (
+              <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
+                <Ionicons name={cat.icon} size={16} color={cat.color} />
+                <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
+                <TouchableOpacity onPress={() => {
+                  setIncomeCategories(prev => prev.filter(c => c.id !== cat.id));
+                }}>
+                  <Ionicons name="close-circle" size={18} color={THEME.colors.error} style={{marginLeft: 5}} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.saveBtn, { marginTop: 20, backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.colors.accent }]} 
+            onPress={() => {
+              const name = prompt("Nombre de la categoría:");
+              if (!name) return;
+              const type = confirm("¿Es un INGRESO? (Aceptar para Ingreso, Cancelar para Gasto)") ? 'income' : 'expense';
+              const newCat = {
+                id: name,
+                color: THEME.colors.accent,
+                icon: type === 'income' ? 'cash-outline' : 'cart-outline'
+              };
+              if (type === 'income') {
+                setIncomeCategories([...incomeCategories, newCat]);
+              } else {
+                setCategories([...categories, newCat]);
+              }
+            }}
+          >
+            <Text style={[styles.saveBtnText, { color: THEME.colors.accent }]}>+ Añadir Categoría</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Sobre VibeCash</Text>
-          <Text style={styles.infoText}>Versión 1.2.0</Text>
-          <Text style={styles.infoText}>Tus datos se guardan localmente para tu privacidad.</Text>
+          <Text style={styles.infoText}>Versión 1.3.0</Text>
+          <Text style={styles.infoText}>Tus datos y categorías se guardan localmente para tu privacidad.</Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -167,5 +223,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 2,
+  },
+  subLabel: {
+    color: THEME.colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 20,
+    marginTop: -10,
+  },
+  groupTitle: {
+    color: THEME.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  catChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  catChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginHorizontal: 8,
   }
 });

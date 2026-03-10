@@ -3,7 +3,7 @@ import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Alert, Platform, T
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME } from './src/constants/theme';
+import { THEME, CATEGORIES, INCOME_CATEGORIES } from './src/constants/theme';
 import DataEntryScreen from './src/screens/DataEntryScreen';
 import ChartsScreen from './src/screens/ChartsScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
@@ -45,6 +45,8 @@ export default function App() {
   const [tempUserName, setTempUserName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [categories, setCategories] = useState(CATEGORIES);
+  const [incomeCategories, setIncomeCategories] = useState(INCOME_CATEGORIES);
 
   // Cargar datos al iniciar
   useEffect(() => {
@@ -53,6 +55,12 @@ export default function App() {
     });
     loadData('user_name').then(name => {
       if (name) setUserName(name);
+    });
+    loadData('user_categories').then(cats => {
+      if (cats) setCategories(cats);
+    });
+    loadData('user_income_categories').then(cats => {
+      if (cats) setIncomeCategories(cats);
     });
   }, []);
 
@@ -66,6 +74,14 @@ export default function App() {
       saveData('user_name', userName);
     }
   }, [userName]);
+
+  useEffect(() => {
+    saveData('user_categories', categories);
+  }, [categories]);
+
+  useEffect(() => {
+    saveData('user_income_categories', incomeCategories);
+  }, [incomeCategories]);
 
   const handleSaveTransaction = (tx) => {
     setTransactions(prev => {
@@ -107,12 +123,22 @@ export default function App() {
                 setTransactions={setTransactions} 
                 onEdit={openEditModal}
                 userName={userName}
+                categories={categories}
+                incomeCategories={incomeCategories}
               /> 
             : currentScreen === 'Charts'
-            ? <ChartsScreen transactions={transactions} />
+            ? <ChartsScreen transactions={transactions} categories={categories} />
             : currentScreen === 'Calendar'
-            ? <CalendarScreen transactions={transactions} />
-            : <ProfileScreen userName={userName} setUserName={setUserName} setTransactions={setTransactions} />
+            ? <CalendarScreen transactions={transactions} categories={categories} incomeCategories={incomeCategories} />
+            : <ProfileScreen 
+                userName={userName} 
+                setUserName={setUserName} 
+                setTransactions={setTransactions} 
+                categories={categories}
+                setCategories={setCategories}
+                incomeCategories={incomeCategories}
+                setIncomeCategories={setIncomeCategories}
+              />
           }
         </View>
 
@@ -203,6 +229,8 @@ export default function App() {
           onClose={() => { setModalVisible(false); setEditingTransaction(null); }} 
           onSave={handleSaveTransaction} 
           initialData={editingTransaction}
+          categories={categories}
+          incomeCategories={incomeCategories}
         />
       </SafeAreaView>
     </SafeAreaProvider>
