@@ -36,7 +36,8 @@ export default function CalendarScreen({ transactions }) {
       marks[selectedDate] = {
         ...marks[selectedDate],
         selected: true,
-        selectedColor: THEME.colors.primary,
+        selectedColor: THEME.colors.accent,
+        selectedTextColor: '#FFF',
       };
     }
     return marks;

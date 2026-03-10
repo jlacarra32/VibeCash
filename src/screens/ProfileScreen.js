@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 
-export default function ProfileScreen({ userName, setUserName }) {
+export default function ProfileScreen({ userName, setUserName, setTransactions }) {
   const [tempName, setTempName] = useState(userName || '');
 
   const handleUpdate = () => {
@@ -13,6 +13,17 @@ export default function ProfileScreen({ userName, setUserName }) {
     }
     setUserName(tempName.trim());
     Alert.alert("Éxito", "Nombre actualizado correctamente");
+  };
+
+  const handleResetData = () => {
+    Alert.alert(
+      "Borrar Todo",
+      "¿Estás seguro de que quieres borrar todos tus movimientos? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Borrar", style: "destructive", onPress: () => setTransactions([]) }
+      ]
+    );
   };
 
   return (
@@ -41,6 +52,19 @@ export default function ProfileScreen({ userName, setUserName }) {
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
             <Text style={styles.saveBtnText}>Actualizar Perfil</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Gestión de Datos</Text>
+          <TouchableOpacity 
+            style={[styles.saveBtn, { backgroundColor: '#334155', borderWidth: 1, borderColor: THEME.colors.error }]} 
+            onPress={handleResetData}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="trash-outline" size={20} color={THEME.colors.error} style={{ marginRight: 8 }} />
+              <Text style={[styles.saveBtnText, { color: THEME.colors.error }]}>Borrar todos los datos</Text>
+            </View>
           </TouchableOpacity>
         </View>
 

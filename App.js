@@ -112,7 +112,7 @@ export default function App() {
             ? <ChartsScreen transactions={transactions} />
             : currentScreen === 'Calendar'
             ? <CalendarScreen transactions={transactions} />
-            : <ProfileScreen userName={userName} setUserName={setUserName} />
+            : <ProfileScreen userName={userName} setUserName={setUserName} setTransactions={setTransactions} />
           }
         </View>
 

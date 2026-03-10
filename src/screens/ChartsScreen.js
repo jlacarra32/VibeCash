@@ -20,10 +20,9 @@ export default function ChartsScreen({ transactions }) {
 
   useEffect(() => {
     animValue.setValue(0);
-    Animated.spring(animValue, {
+    Animated.timing(animValue, {
       toValue: 1,
-      tension: 50,
-      friction: 7,
+      duration: 1000,
       useNativeDriver: false
     }).start();
   }, [cashFlow.totalIncome, displayExpense, activeTab]);
@@ -64,22 +63,23 @@ export default function ChartsScreen({ transactions }) {
       </View>
       
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.mainCard}>
+        <View style={styles.chartSection}>
           <View style={styles.chartWrapper}>
-            {/* Income Bar */}
-            <View style={styles.barBox}>
-              <Text style={styles.barValue}>{cashFlow.totalIncome.toFixed(0)}€</Text>
-              <View style={styles.barTrack}>
-                <Animated.View style={[styles.barFill, { height: animatedIncomeHeight, backgroundColor: THEME.colors.success }]} />
+            {/* Income Column */}
+            <View style={styles.columnBox}>
+              <View style={styles.barContainer}>
+                <Animated.View style={[styles.barFill, { height: animatedIncomeHeight, backgroundColor: THEME.colors.success }]}>
+                   <View style={styles.glow} />
+                </Animated.View>
               </View>
               <Text style={styles.barLabel}>Ingresos</Text>
+              <Text style={styles.barValue}>{cashFlow.totalIncome.toFixed(0)}€</Text>
             </View>
 
-            {/* Expense Bar */}
-            <View style={styles.barBox}>
-              <Text style={styles.barValue}>{displayExpense.toFixed(0)}€</Text>
-              <View style={styles.barTrack}>
-                <Animated.View style={[styles.barFill, { height: animatedExpenseHeight, backgroundColor: THEME.colors.border, overflow: 'hidden' }]}>
+            {/* Expense Column */}
+            <View style={styles.columnBox}>
+              <View style={styles.barContainer}>
+                <Animated.View style={[styles.barFill, { height: animatedExpenseHeight, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }]}>
                   {CATEGORIES.map(cat => {
                     const amount = displayCategories[cat.id] || 0;
                     if (amount <= 0 || displayExpense <= 0) return null;
@@ -94,12 +94,13 @@ export default function ChartsScreen({ transactions }) {
                 </Animated.View>
               </View>
               <Text style={styles.barLabel}>Gastos</Text>
+              <Text style={styles.barValue}>{displayExpense.toFixed(0)}€</Text>
             </View>
           </View>
 
-          <View style={styles.legendGrid}>
+          <View style={styles.legendContainer}>
             {CATEGORIES.map(cat => (
-              <View key={cat.id} style={styles.legendCell}>
+              <View key={cat.id} style={styles.legendTag}>
                 <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
                 <Text style={styles.legendName}>{cat.id}</Text>
               </View>
@@ -108,24 +109,24 @@ export default function ChartsScreen({ transactions }) {
         </View>
 
         {displayExpense > 0 && (
-          <View style={styles.breakdownCard}>
-            <Text style={styles.cardTitle}>Desglose de Gastos</Text>
+          <View style={styles.listSection}>
+            <Text style={styles.sectionTitle}>Distribución Mensual</Text>
             {CATEGORIES.map(cat => {
               const amountFloat = displayCategories[cat.id] || 0;
               if (amountFloat <= 0) return null;
               const percentage = ((amountFloat / displayExpense) * 100).toFixed(0);
               return (
-                <View key={cat.id} style={styles.catLine}>
-                  <View style={[styles.catIconCircle, { backgroundColor: cat.color + '15' }]}>
-                    <Ionicons name={cat.icon} size={16} color={cat.color} />
+                <View key={cat.id} style={styles.listLine}>
+                  <View style={[styles.iconCircle, { backgroundColor: cat.color + '15' }]}>
+                    <Ionicons name={cat.icon} size={18} color={cat.color} />
                   </View>
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <View style={styles.catLabelRow}>
-                      <Text style={styles.catName}>{cat.id}</Text>
-                      <Text style={styles.catVal}>{amountFloat.toFixed(2)}€</Text>
+                  <View style={{ flex: 1, marginLeft: 16 }}>
+                    <View style={styles.rowInfo}>
+                      <Text style={styles.rowName}>{cat.id}</Text>
+                      <Text style={styles.rowVal}>{amountFloat.toFixed(2)}€</Text>
                     </View>
-                    <View style={styles.track}>
-                      <View style={[styles.fill, { width: percentage + '%', backgroundColor: cat.color }]} />
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: percentage + '%', backgroundColor: cat.color }]} />
                     </View>
                   </View>
                 </View>
@@ -193,125 +194,122 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
-  mainCard: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 30,
-    padding: 24,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  chartSection: {
+    marginTop: 20,
+    marginBottom: 40,
+    paddingHorizontal: 20,
   },
   chartWrapper: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    height: 180,
+    height: 300,
     alignItems: 'flex-end',
-    marginBottom: 30,
   },
-  barBox: {
+  columnBox: {
     alignItems: 'center',
-    width: 80,
+    width: 120,
   },
-  barValue: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FFF',
-    marginBottom: 8,
-  },
-  barTrack: {
-    width: 40,
-    height: 120,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
+  barContainer: {
+    width: 60,
+    height: 220,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 30,
     justifyContent: 'flex-end',
     overflow: 'hidden',
+    marginBottom: 15,
   },
   barFill: {
     width: '100%',
-    borderRadius: 0,
+    borderRadius: 30,
+  },
+  glow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   barLabel: {
-    marginTop: 10,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: THEME.colors.textSecondary,
+    marginBottom: 4,
   },
-  legendGrid: {
+  barValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFF',
+  },
+  legendContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: THEME.colors.border,
+    gap: 12,
+    marginTop: 40,
   },
-  legendCell: {
+  legendTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 10,
-    marginVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 8,
   },
   legendName: {
-    fontSize: 11,
-    color: THEME.colors.textSecondary,
+    fontSize: 12,
+    color: '#FFF',
     fontWeight: '600',
   },
-  breakdownCard: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 30,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  listSection: {
+    paddingHorizontal: 25,
+    marginTop: 20,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: THEME.colors.textPrimary,
-    marginBottom: 20,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FFF',
+    marginBottom: 25,
   },
-  catLine: {
+  listLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
   },
-  catIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  catLabelRow: {
+  rowInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  catName: {
-    fontSize: 14,
+  rowName: {
+    fontSize: 16,
     fontWeight: '700',
-    color: THEME.colors.textPrimary,
+    color: '#FFF',
   },
-  catVal: {
-    fontSize: 14,
+  rowVal: {
+    fontSize: 16,
     fontWeight: '800',
     color: THEME.colors.accent,
   },
-  track: {
-    height: 6,
+  progressTrack: {
+    height: 8,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 3,
+    borderRadius: 4,
     width: '100%',
   },
-  fill: {
+  progressFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 4,
   }
 });

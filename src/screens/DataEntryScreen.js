@@ -54,9 +54,9 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
           <Text style={styles.welcomeTitle}>¡Hola!</Text>
           <Text style={styles.userName}>{userName || 'Usuario'}</Text>
         </View>
-        <TouchableOpacity onPress={handleResetData} style={styles.topIconBtn}>
-          <Ionicons name="settings-outline" size={24} color={THEME.colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.topIconBtn}>
+          <Ionicons name="leaf-outline" size={24} color={THEME.colors.accent} />
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
