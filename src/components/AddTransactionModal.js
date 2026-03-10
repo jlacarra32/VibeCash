@@ -139,7 +139,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                   style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
                   onPress={() => setCategory(cat.id)}
                 >
-                  <Ionicons name={cat.icon} size={20} color={category === cat.id ? cat.color : '#64748B'} />
+                  <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
                   <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
                 </TouchableOpacity>
               ))}

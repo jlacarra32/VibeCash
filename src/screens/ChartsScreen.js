@@ -118,7 +118,7 @@ export default function ChartsScreen({ transactions, categories }) {
               return (
                 <View key={cat.id} style={styles.listLine}>
                   <View style={[styles.iconCircle, { backgroundColor: cat.color + '15' }]}>
-                    <Ionicons name={cat.icon} size={18} color={cat.color} />
+                    <Text style={{fontSize: 18}}>{cat.icon}</Text>
                   </View>
                   <View style={{ flex: 1, marginLeft: 16 }}>
                     <View style={styles.rowInfo}>

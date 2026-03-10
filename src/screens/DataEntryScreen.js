@@ -116,7 +116,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
           {transactions.slice().reverse().map(tx => (
             <View key={tx.id} style={styles.transactionCard}>
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
-                <Ionicons name={getCategoryIcon(tx.category, tx.type)} size={22} color={getCategoryColor(tx.category, tx.type)} />
+                <Text style={{fontSize: 18}}>{getCategoryIcon(tx.category, tx.type)}</Text>
               </View>
               
               <View style={styles.txInfo}>

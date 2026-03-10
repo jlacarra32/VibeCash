@@ -13,6 +13,13 @@ export default function ProfileScreen({
   setIncomeCategories 
 }) {
   const [tempName, setTempName] = useState(userName || '');
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState(THEME.colors.accent);
+  const [newCatEmoji, setNewCatEmoji] = useState('💰');
+  const [newCatType, setNewCatType] = useState('expense');
+
+  const COLORS = ['#8B5CF6', '#EC4899', '#F43F5E', '#10B981', '#3B82F6', '#F59E0B', '#64748B'];
 
   const handleUpdate = () => {
     if (!tempName.trim()) {
@@ -84,7 +91,7 @@ export default function ProfileScreen({
           <View style={styles.categoriesGrid}>
             {categories.map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Ionicons name={cat.icon} size={16} color={cat.color} />
+                <Text style={{fontSize: 14}}>{cat.icon}</Text>
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity onPress={() => {
                   setCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -99,7 +106,7 @@ export default function ProfileScreen({
           <View style={styles.categoriesGrid}>
             {incomeCategories.map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Ionicons name={cat.icon} size={16} color={cat.color} />
+                <Text style={{fontSize: 14}}>{cat.icon}</Text>
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity onPress={() => {
                   setIncomeCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -112,25 +119,85 @@ export default function ProfileScreen({
 
           <TouchableOpacity 
             style={[styles.saveBtn, { marginTop: 20, backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.colors.accent }]} 
-            onPress={() => {
-              const name = prompt("Nombre de la categoría:");
-              if (!name) return;
-              const type = confirm("¿Es un INGRESO? (Aceptar para Ingreso, Cancelar para Gasto)") ? 'income' : 'expense';
-              const newCat = {
-                id: name,
-                color: THEME.colors.accent,
-                icon: type === 'income' ? 'cash-outline' : 'cart-outline'
-              };
-              if (type === 'income') {
-                setIncomeCategories([...incomeCategories, newCat]);
-              } else {
-                setCategories([...categories, newCat]);
-              }
-            }}
+            onPress={() => setIsAddModalVisible(true)}
           >
-            <Text style={[styles.saveBtnText, { color: THEME.colors.accent }]}>+ Añadir Categoría</Text>
+            <Text style={[styles.saveBtnText, { color: THEME.colors.accent }]}>+ Nueva Categoría</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Modal de Nueva Categoría */}
+        <Modal visible={isAddModalVisible} animationType="slide" transparent={true}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Nueva Categoría</Text>
+              
+              <View style={styles.typeRow}>
+                <TouchableOpacity 
+                  style={[styles.typeBtn, newCatType === 'expense' && {backgroundColor: THEME.colors.accent}]}
+                  onPress={() => setNewCatType('expense')}
+                >
+                  <Text style={{color: '#FFF', fontWeight: 'bold'}}>Gasto</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.typeBtn, newCatType === 'income' && {backgroundColor: THEME.colors.success}]}
+                  onPress={() => setNewCatType('income')}
+                >
+                  <Text style={{color: '#FFF', fontWeight: 'bold'}}>Ingreso</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre (ej: Gimnasio)"
+                placeholderTextColor={THEME.colors.textSecondary}
+                value={newCatName}
+                onChangeText={setNewCatName}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Emoji (ej: 🏋️)"
+                placeholderTextColor={THEME.colors.textSecondary}
+                value={newCatEmoji}
+                onChangeText={setNewCatEmoji}
+                maxLength={2}
+              />
+
+              <Text style={styles.label}>Color</Text>
+              <View style={styles.categoriesGrid}>
+                {COLORS.map(c => (
+                  <TouchableOpacity 
+                    key={c} 
+                    style={[styles.colorCircle, {backgroundColor: c}, newCatColor === c && {borderWidth: 3, borderColor: '#FFF'}]}
+                    onPress={() => setNewCatColor(c)}
+                  />
+                ))}
+              </View>
+
+              <View style={{flexDirection: 'row', gap: 10, marginTop: 30}}>
+                <TouchableOpacity 
+                  style={[styles.saveBtn, {flex: 1, backgroundColor: '#334155'}]}
+                  onPress={() => setIsAddModalVisible(false)}
+                >
+                  <Text style={styles.saveBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.saveBtn, {flex: 1}]}
+                  onPress={() => {
+                    if (!newCatName) return;
+                    const cat = { id: newCatName, color: newCatColor, icon: newCatEmoji };
+                    if (newCatType === 'income') setIncomeCategories([...incomeCategories, cat]);
+                    else setCategories([...categories, cat]);
+                    setIsAddModalVisible(false);
+                    setNewCatName('');
+                  }}
+                >
+                  <Text style={styles.saveBtnText}>Guardar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Sobre VibeCash</Text>
@@ -263,5 +330,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginHorizontal: 8,
+  },
+  colorCircle: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  typeBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 15,
+    alignItems: 'center',
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FFF',
+    marginBottom: 25,
+    textAlign: 'center',
   }
 });

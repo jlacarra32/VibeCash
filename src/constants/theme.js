@@ -35,15 +35,15 @@ export const THEME = {
 };
 
 export const CATEGORIES = [
-  { id: 'Comida', color: '#F97316', icon: 'fast-food' },   // Orange
-  { id: 'Fiesta', color: '#8B5CF6', icon: 'beer' },        // Violet
-  { id: 'Coche', color: '#3B82F6', icon: 'car' },          // blue
-  { id: 'Supermercado', color: '#10B981', icon: 'cart' },  // emerald
-  { id: 'Otros', color: '#94A3B8', icon: 'ellipsis-horizontal' }, // slate
+  { id: 'Comida', color: '#F97316', icon: '🍕' },
+  { id: 'Fiesta', color: '#8B5CF6', icon: '🍺' },
+  { id: 'Coche', color: '#3B82F6', icon: '🚗' },
+  { id: 'Supermercado', color: '#10B981', icon: '🛒' },
+  { id: 'Otros', color: '#94A3B8', icon: '📦' },
 ];
 
 export const INCOME_CATEGORIES = [
-  { id: 'Bizum', color: '#6366F1', icon: 'phone-portrait' }, // indigo
-  { id: 'Mes', color: '#EAB308', icon: 'calendar' },         // yellow
-  { id: 'Otros', color: '#22C55E', icon: 'cash' },           // green
+  { id: 'Bizum', color: '#6366F1', icon: '📱' },
+  { id: 'Mes', color: '#EAB308', icon: '💰' },
+  { id: 'Otros', color: '#22C55E', icon: '✨' },
 ];

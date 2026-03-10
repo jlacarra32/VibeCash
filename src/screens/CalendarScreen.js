@@ -87,7 +87,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
               onPress={() => setSelectedTx(item)}
             >
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(item.category, item.type, categories, incomeCategories) + '15' }]}>
-                <Ionicons name={getCategoryIcon(item.category, item.type, categories, incomeCategories)} size={22} color={getCategoryColor(item.category, item.type, categories, incomeCategories)} />
+                <Text style={{fontSize: 18}}>{getCategoryIcon(item.category, item.type, categories, incomeCategories)}</Text>
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.txDesc}>{item.description}</Text>
@@ -130,12 +130,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Categoría:</Text>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <Ionicons 
-                      name={getCategoryIcon(selectedTx.category, selectedTx.type, categories, incomeCategories)} 
-                      size={16} 
-                      color={getCategoryColor(selectedTx.category, selectedTx.type, categories, incomeCategories)} 
-                      style={{marginRight: 6}}
-                    />
+                    <Text style={{fontSize: 16, marginRight: 6}}>{getCategoryIcon(selectedTx.category, selectedTx.type, categories, incomeCategories)}</Text>
                     <Text style={styles.modalValue}>{selectedTx.category}</Text>
                   </View>
                 </View>
