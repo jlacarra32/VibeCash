@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
@@ -47,7 +47,7 @@ export default function CalendarScreen({ transactions }) {
   }, [transactions, selectedDate]);
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
       <Text style={styles.header}>Historial</Text>
       
       <View style={styles.cardContainer}>
@@ -79,24 +79,21 @@ export default function CalendarScreen({ transactions }) {
         {dailyTransactions.length === 0 ? (
           <Text style={styles.emptyText}>No hay movimientos este día</Text>
         ) : (
-          <FlatList
-            data={dailyTransactions}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.txItem}
-                onPress={() => setSelectedTx(item)}
-              >
-                <View style={styles.txInfo}>
-                  <Text style={styles.txDesc}>{item.description}</Text>
-                  <Text style={styles.txCat}>{item.category}</Text>
-                </View>
-                <Text style={[styles.txAmount, { color: item.type === 'income' ? THEME.colors.success : THEME.colors.accent }]}>
-                  {item.type === 'income' ? '+' : '-'}{item.amount.toFixed(2)}€
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
+          dailyTransactions.map(item => (
+            <TouchableOpacity 
+              key={item.id}
+              style={styles.txItem}
+              onPress={() => setSelectedTx(item)}
+            >
+              <View style={styles.txInfo}>
+                <Text style={styles.txDesc}>{item.description}</Text>
+                <Text style={styles.txCat}>{item.category}</Text>
+              </View>
+              <Text style={[styles.txAmount, { color: item.type === 'income' ? THEME.colors.success : THEME.colors.accent }]}>
+                {item.type === 'income' ? '+' : '-'}{item.amount.toFixed(2)}€
+              </Text>
+            </TouchableOpacity>
+          ))
         )}
       </View>
 
@@ -149,7 +146,7 @@ export default function CalendarScreen({ transactions }) {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </ScrollView>
   );
 }
 

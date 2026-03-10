@@ -152,15 +152,43 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             </TouchableOpacity>
 
             {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) setDate(selectedDate);
-                }}
-              />
+              Platform.OS === 'web' ? (
+                <View style={styles.datePickerWeb}>
+                  <input
+                    type="date"
+                    id="dateInput"
+                    defaultValue={date.toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      const selectedDate = new Date(e.target.value);
+                      if (selectedDate) setDate(selectedDate);
+                      setShowDatePicker(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '15px',
+                      borderRadius: '15px',
+                      backgroundColor: '#0F172A',
+                      color: '#FFF',
+                      border: `1px solid ${THEME.colors.border}`,
+                      fontSize: '16px',
+                      marginBottom: '20px'
+                    }}
+                  />
+                  <TouchableOpacity style={styles.webDateClose} onPress={() => setShowDatePicker(false)}>
+                    <Text style={{ color: THEME.colors.accent, fontWeight: 'bold' }}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) setDate(selectedDate);
+                  }}
+                />
+              )
             )}
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
@@ -314,5 +342,16 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: '800',
+  },
+  datePickerWeb: {
+    backgroundColor: '#0F172A',
+    borderRadius: 18,
+    padding: 10,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  webDateClose: {
+    marginTop: 5,
+    padding: 10,
   }
 });

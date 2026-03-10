@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "aplicacion-gastos",
-    "slug": "aplicacion-gastos",
+    "name": "VibeCash",
+    "slug": "vibecash",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +22,11 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "backgroundColor": "#0F172A",
+      "themeColor": "#0F172A",
+      "description": "VibeCash - Tu control de gastos con estilo",
+      "display": "standalone"
     },
     "plugins": [
       [
@@ -31,9 +35,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#0F172A",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#0F172A"
           }
         }
       ]
