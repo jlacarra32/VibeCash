@@ -77,7 +77,7 @@ export default function ProfileScreen({
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState(THEME.colors.accent);
-  const [newCatType, setNewCatType] = useState('expense');
+  const newCatType = 'expense'; // Forzado a gasto
 
   const handleUpdate = () => {
     if (!tempName.trim()) { Alert.alert('Error', 'El nombre no puede estar vacío'); return; }
@@ -89,7 +89,6 @@ export default function ProfileScreen({
     setIsAddModalVisible(false);
     setNewCatName('');
     setNewCatColor(THEME.colors.accent);
-    setNewCatType('expense');
   };
 
   const handleAddCategory = () => {
@@ -171,7 +170,6 @@ export default function ProfileScreen({
           </View>
           <Text style={styles.sectionSub}>Toca la ✕ para eliminar una categoría</Text>
 
-          <Text style={styles.groupLabel}>💸 Gastos</Text>
           <View style={styles.catGrid}>
             {(categories || []).map(cat => (
               <View key={cat.id} style={[styles.catCard, { borderColor: cat.color + '60' }]}>
@@ -181,24 +179,6 @@ export default function ProfileScreen({
                 <Text style={[styles.catCardName, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity
                   onPress={() => setCategories(prev => prev.filter(c => c.id !== cat.id))}
-                  style={styles.catRemoveBtn}
-                >
-                  <Ionicons name="close-circle" size={16} color={THEME.colors.error} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-
-          <Text style={[styles.groupLabel, { marginTop: 16 }]}>📈 Ingresos</Text>
-          <View style={styles.catGrid}>
-            {(incomeCategories || []).map(cat => (
-              <View key={cat.id} style={[styles.catCard, { borderColor: cat.color + '60' }]}>
-                <View style={[styles.catCardIcon, { backgroundColor: cat.color + '20' }]}>
-                  <Ionicons name={cat.icon || 'cash-outline'} size={16} color={cat.color} />
-                </View>
-                <Text style={[styles.catCardName, { color: cat.color }]}>{cat.id}</Text>
-                <TouchableOpacity
-                  onPress={() => setIncomeCategories(prev => prev.filter(c => c.id !== cat.id))}
                   style={styles.catRemoveBtn}
                 >
                   <Ionicons name="close-circle" size={16} color={THEME.colors.error} />
@@ -297,20 +277,7 @@ export default function ProfileScreen({
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Nueva Categoría</Text>
 
-            {/* Tipo */}
-            <View style={styles.typeRow}>
-              {[{ key: 'expense', label: '💸 Gasto' }, { key: 'income', label: '📈 Ingreso' }].map(t => (
-                <TouchableOpacity
-                  key={t.key}
-                  style={[styles.typeBtn, newCatType === t.key && styles.typeBtnActive]}
-                  onPress={() => setNewCatType(t.key)}
-                >
-                  <Text style={[styles.typeBtnText, newCatType === t.key && styles.typeBtnTextActive]}>
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+
 
             {/* Nombre */}
             <TextInput

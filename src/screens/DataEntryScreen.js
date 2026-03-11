@@ -8,6 +8,7 @@ import { calculateCashFlow } from '../logic/cashFlow';
 import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
 
 export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories, onGoToHistory }) {
+  const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
   const balanceAnim = useRef(new Animated.Value(1)).current;
