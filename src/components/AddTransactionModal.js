@@ -104,7 +104,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
 
             <TextInput 
               style={styles.input}
-              placeholder="¿En qué lo has gastado?"
+              placeholder={type === 'income' ? "¿De dónde viene este dinero?" : "¿En qué lo has gastado?"}
               placeholderTextColor="#64748B"
               value={description}
               onChangeText={setDescription}
@@ -151,24 +151,28 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                />
             )}
 
-            {/* Category selection */}
-            <Text style={styles.label}>Categoría</Text>
-            <View style={styles.categoryGrid}>
-              {((type === 'expense' ? categories : incomeCategories) || []).map(cat => (
-                <TouchableOpacity 
-                  key={cat.id} 
-                  style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
-                  onPress={() => setCategory(cat.id)}
-                >
-                  <Ionicons 
-                    name={cat.icon || (type === 'income' ? 'cash-outline' : 'cart-outline')} 
-                    size={20} 
-                    color={category === cat.id ? cat.color : '#64748B'} 
-                  />
-                  <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* Category selection - Only for expenses */}
+            {type === 'expense' && (
+              <>
+                <Text style={styles.label}>Categoría</Text>
+                <View style={styles.categoryGrid}>
+                  {(categories || []).map(cat => (
+                    <TouchableOpacity 
+                      key={cat.id} 
+                      style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
+                      onPress={() => setCategory(cat.id)}
+                    >
+                      <Ionicons 
+                        name={cat.icon || 'cart-outline'} 
+                        size={20} 
+                        color={category === cat.id ? cat.color : '#64748B'} 
+                      />
+                      <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Date Selection */}
             <TouchableOpacity style={styles.dateRow} onPress={() => setShowDatePicker(true)}>

@@ -36,8 +36,8 @@ export const THEME = {
 
 export const CATEGORIES = [
   { id: 'Comida', color: '#F97316', icon: 'restaurant-outline' },
-  { id: 'Fiesta', color: '#8B5CF6', icon: 'beer-outline' },
-  { id: 'Coche', color: '#3B82F6', icon: 'car-outline' },
+  { id: 'Fiesta', color: '#EC4899', icon: 'beer-outline' },
+  { id: 'Transporte', color: '#3B82F6', icon: 'bus-outline' },
   { id: 'Supermercado', color: '#10B981', icon: 'cart-outline' },
   { id: 'Otros', color: '#94A3B8', icon: 'ellipsis-horizontal-outline' },
 ];

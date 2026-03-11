@@ -9,35 +9,51 @@ import { THEME } from '../constants/theme';
 const TOP = Platform.OS === 'web' ? 20 : 50;
 
 const ICON_MAP = {
+  // Ingresos
   nomina:'cash-outline', sueldo:'cash-outline', paga:'cash-outline',
   bizum:'send-outline', transferencia:'swap-horizontal-outline',
   ahorro:'wallet-outline', inversion:'trending-up-outline',
   acciones:'stats-chart-outline', prestamo:'wallet-outline',
   hacienda:'document-text-outline', devolucion:'refresh-outline',
   venta:'pricetag-outline', extra:'gift-outline',
+  
+  // Gastos Comida/Hogar
   comida:'fast-food-outline', restaurante:'restaurant-outline',
   bar:'beer-outline', cafe:'cafe-outline', copa:'wine-outline',
   cena:'restaurant-outline', super:'cart-outline', compra:'basket-outline',
+  compras:'cart-outline', amazon:'logo-amazon',
   pizza:'pizza-outline', hamburguesa:'fast-food-outline', sushi:'fish-outline',
   alquiler:'home-outline', casa:'home-outline', piso:'home-outline',
   hipoteca:'business-outline', seguro:'shield-checkmark-outline',
   luz:'flash-outline', electricidad:'flash-outline', agua:'water-outline',
   gas:'flame-outline', internet:'wifi-outline', movil:'phone-portrait-outline',
+  
+  // Transporte
   coche:'car-outline', moto:'bicycle-outline', bicicleta:'bicycle-outline',
   gasolina:'funnel-outline', reparacion:'build-outline', parking:'car-sport-outline',
   bus:'bus-outline', tren:'train-outline', metro:'subway-outline',
-  vuelo:'airplane-outline', avion:'airplane-outline',
+  vuelo:'airplane-outline', avion:'airplane-outline', viaje:'airplane-outline',
+  
+  // Salud/Cuidado
   salud:'medkit-outline', medico:'medical-outline', farmacia:'bandage-outline',
   psicologo:'chatbubble-ellipses-outline', peluqueria:'cut-outline',
   gimnasio:'fitness-outline', gym:'fitness-outline',
-  deporte:'football-outline', futbol:'football-outline',
-  padel:'tennisball-outline', tenis:'tennisball-outline',
-  cine:'film-outline', netflix:'play-circle-outline',
+  
+  // Ocio/Deportes/Cultura
+  deporte:'fitness-outline', futbol:'football-outline', padel:'tennisball-outline',
+  tenis:'tennisball-outline', cine:'film-outline', netflix:'play-circle-outline',
   spotify:'musical-note-outline', fiesta:'sparkles-outline',
   ropa:'shirt-outline', calzado:'footsteps-outline', regalo:'gift-outline',
   tecnologia:'desktop-outline', ordenador:'desktop-outline',
-  viaje:'airplane-outline', hotel:'bed-outline',
-  curso:'school-outline', universidad:'school-outline',
+  juegos:'game-controller-outline', hobby:'infinite-outline',
+  
+  // Estudios/Profesional
+  estudios:'school-outline', universidad:'school-outline', colegio:'school-outline',
+  curso:'school-outline', master:'school-outline', arquitectura:'brush-outline',
+  diseño:'brush-outline', arte:'brush-outline', dibujo:'brush-outline',
+  libros:'book-outline', lectura:'book-outline', suscripciones:'card-outline',
+  
+  // Otros
   perro:'paw-outline', gato:'paw-outline', mascota:'paw-outline',
 };
 
