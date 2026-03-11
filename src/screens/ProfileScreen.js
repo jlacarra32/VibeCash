@@ -30,42 +30,7 @@ export default function ProfileScreen({
     Alert.alert("Éxito", "Nombre actualizado correctamente");
   };
 
-  const handleResetData = () => {
-    Alert.alert(
-      "Opciones de Borrado",
-      "¿Qué deseas hacer? Elige con cuidado.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Solo Movimientos", 
-          onPress: () => {
-            Alert.alert(
-              "Borrar Movimientos",
-              "Se eliminarán todos los registros de gastos e ingresos. ¿Continuar?",
-              [
-                { text: "No", style: "cancel" },
-                { text: "Sí, Borrar", style: "destructive", onPress: () => setTransactions([]) }
-              ]
-            );
-          } 
-        },
-        { 
-          text: "Reiniciar App (TODO)", 
-          style: "destructive",
-          onPress: () => {
-            Alert.alert(
-              "REINICIO TOTAL",
-              "Se borrarán todos los datos, nombre y categorías. Volverás al inicio. ¿Estás seguro?",
-              [
-                { text: "Cancelar", style: "cancel" },
-                { text: "REINICIAR TODO", style: "destructive", onPress: onFullReset }
-              ]
-            );
-          }
-        }
-      ]
-    );
-  };
+
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -98,14 +63,40 @@ export default function ProfileScreen({
 
         <View style={styles.formCard}>
           <Text style={styles.label}>Gestión de Datos</Text>
+          <Text style={styles.subLabel}>Opciones para limpiar tu información</Text>
+          
           <TouchableOpacity 
-            style={[styles.saveBtn, { backgroundColor: '#334155', borderWidth: 1, borderColor: THEME.colors.error }]} 
-            onPress={handleResetData}
+            style={[styles.resetBtn, { marginBottom: 15 }]} 
+            onPress={() => {
+              Alert.alert(
+                "Borrar Movimientos",
+                "¿Seguro que quieres borrar todos los gastos e ingresos? Mantendrás tu nombre y categorías.",
+                [
+                  { text: "Cancelar", style: "cancel" },
+                  { text: "Sí, Borrar", style: "destructive", onPress: () => setTransactions([]) }
+                ]
+              );
+            }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="trash-outline" size={20} color={THEME.colors.error} style={{ marginRight: 8 }} />
-              <Text style={[styles.saveBtnText, { color: THEME.colors.error }]}>Borrar todos los datos</Text>
-            </View>
+            <Ionicons name="list-outline" size={20} color={THEME.colors.textPrimary} />
+            <Text style={styles.resetBtnText}>Borrar solo movimientos</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.resetBtn, { borderColor: THEME.colors.error }]} 
+            onPress={() => {
+              Alert.alert(
+                "REINICIO TOTAL",
+                "Se borrará TODO: nombre, categorías y gastos. Volverás a la pantalla de bienvenida. ¿Estás seguro?",
+                [
+                  { text: "Cancelar", style: "cancel" },
+                  { text: "REINICIAR TODO", style: "destructive", onPress: onFullReset }
+                ]
+              );
+            }}
+          >
+            <Ionicons name="refresh-circle-outline" size={20} color={THEME.colors.error} />
+            <Text style={[styles.resetBtnText, { color: THEME.colors.error }]}>Reiniciar aplicación completa</Text>
           </TouchableOpacity>
         </View>
 
@@ -352,6 +343,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginHorizontal: 8,
+  },
+  resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 15,
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  resetBtnText: {
+    color: THEME.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 10,
   },
   colorCircle: {
     width: 35,
