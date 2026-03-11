@@ -43,13 +43,13 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
   };
 
   const getCategoryIcon = (catId, type) => {
-    const list = type === 'income' ? incomeCategories : categories;
+    const list = (type === 'income' ? incomeCategories : categories) || [];
     const cat = list.find(c => c.id === catId);
-    return cat ? cat.icon : 'cash-outline';
+    return cat ? cat.icon : '📦';
   };
 
   const getCategoryColor = (catId, type) => {
-    const list = type === 'income' ? incomeCategories : categories;
+    const list = (type === 'income' ? incomeCategories : categories) || [];
     const cat = list.find(c => c.id === catId);
     return cat ? cat.color : THEME.colors.textSecondary;
   };
@@ -113,7 +113,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
         {/* Transactions list */}
         <View style={styles.historyList}>
           <Text style={styles.sectionTitle}>Movimientos Recientes</Text>
-          {transactions.slice().reverse().map(tx => (
+          {(transactions || []).slice().reverse().map(tx => (
             <View key={tx.id} style={styles.transactionCard}>
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
                 <Text style={{fontSize: 18}}>{getCategoryIcon(tx.category, tx.type)}</Text>

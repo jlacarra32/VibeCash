@@ -80,7 +80,7 @@ export default function ChartsScreen({ transactions, categories }) {
             <View style={styles.columnBox}>
               <View style={styles.barContainer}>
                 <Animated.View style={[styles.barFill, { height: animatedExpenseHeight, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }]}>
-                  {categories.map(cat => {
+                  {(categories || []).map(cat => {
                     const amount = displayCategories[cat.id] || 0;
                     if (amount <= 0 || displayExpense <= 0) return null;
                     const partHeight = (amount / displayExpense) * 100;
@@ -99,7 +99,7 @@ export default function ChartsScreen({ transactions, categories }) {
           </View>
 
           <View style={styles.legendContainer}>
-            {categories.map(cat => (
+            {(categories || []).map(cat => (
               <View key={cat.id} style={styles.legendTag}>
                 <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
                 <Text style={styles.legendName}>{cat.id}</Text>
@@ -111,7 +111,7 @@ export default function ChartsScreen({ transactions, categories }) {
         {displayExpense > 0 && (
           <View style={styles.listSection}>
             <Text style={styles.sectionTitle}>Distribución Mensual</Text>
-            {categories.map(cat => {
+            {(categories || []).map(cat => {
               const amountFloat = displayCategories[cat.id] || 0;
               if (amountFloat <= 0) return null;
               const percentage = ((amountFloat / displayExpense) * 100).toFixed(0);

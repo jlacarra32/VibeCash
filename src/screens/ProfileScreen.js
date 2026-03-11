@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 
@@ -89,7 +89,7 @@ export default function ProfileScreen({
           
           <Text style={styles.groupTitle}>Gastos</Text>
           <View style={styles.categoriesGrid}>
-            {categories.map(cat => (
+            {(categories || []).map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
                 <Text style={{fontSize: 14}}>{cat.icon}</Text>
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
@@ -104,7 +104,7 @@ export default function ProfileScreen({
 
           <Text style={[styles.groupTitle, {marginTop: 15}]}>Ingresos</Text>
           <View style={styles.categoriesGrid}>
-            {incomeCategories.map(cat => (
+            {(incomeCategories || []).map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
                 <Text style={{fontSize: 14}}>{cat.icon}</Text>
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
@@ -335,6 +335,13 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 17.5,
+  },
+  modalContent: {
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 30,
+    padding: 25,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
   },
   modalOverlay: {
     flex: 1,

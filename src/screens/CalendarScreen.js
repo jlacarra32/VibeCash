@@ -302,13 +302,13 @@ const styles = StyleSheet.create({
 });
 
 const getCategoryColor = (catId, type, categories, incomeCategories) => {
-  const list = type === 'income' ? incomeCategories : categories;
+  const list = (type === 'income' ? incomeCategories : categories) || [];
   const cat = list.find(c => c.id === catId);
   return cat ? cat.color : THEME.colors.textSecondary;
 };
 
 const getCategoryIcon = (catId, type, categories, incomeCategories) => {
-  const list = type === 'income' ? incomeCategories : categories;
+  const list = (type === 'income' ? incomeCategories : categories) || [];
   const cat = list.find(c => c.id === catId);
-  return cat ? cat.icon : 'cash-outline';
+  return cat ? cat.icon : '📦';
 };

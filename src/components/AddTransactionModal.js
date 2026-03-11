@@ -133,7 +133,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             {/* Category selection */}
             <Text style={styles.label}>Categoría</Text>
             <View style={styles.categoryGrid}>
-              {(type === 'expense' ? categories : incomeCategories).map(cat => (
+              {((type === 'expense' ? categories : incomeCategories) || []).map(cat => (
                 <TouchableOpacity 
                   key={cat.id} 
                   style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
