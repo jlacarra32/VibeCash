@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Alert, Platform, TextInput } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Alert, Platform, TextInput, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
