@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Alert, Platform, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -42,6 +42,25 @@ import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('DataEntry');
+  const [displayedScreen, setDisplayedScreen] = useState('DataEntry');
+  const screenOpacity = useRef(new Animated.Value(1)).current;
+
+  const navigate = useCallback((screen) => {
+    if (screen === currentScreen) return;
+    Animated.timing(screenOpacity, {
+      toValue: 0,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentScreen(screen);
+      setDisplayedScreen(screen);
+      Animated.timing(screenOpacity, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [currentScreen, screenOpacity]);
   const [transactions, setTransactions] = useState([]);
   const [userName, setUserName] = useState(null);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
@@ -168,7 +187,7 @@ export default function App() {
         <StatusBar barStyle="light-content" backgroundColor={THEME.colors.background} />
         
         {/* Screen Content */}
-        <View style={styles.content}>
+        <Animated.View style={[styles.content, { opacity: screenOpacity }]}>
           {currentScreen === 'DataEntry' 
             ? <DataEntryScreen 
                 transactions={transactions} 
@@ -177,7 +196,7 @@ export default function App() {
                 userName={userName}
                 categories={categories}
                 incomeCategories={incomeCategories}
-                onGoToHistory={() => setCurrentScreen('History')}
+                onGoToHistory={() => navigate('History')}
               /> 
             : currentScreen === 'Charts'
             ? <ChartsScreen transactions={transactions} categories={categories} />
@@ -190,7 +209,7 @@ export default function App() {
                 incomeCategories={incomeCategories} 
                 onEdit={openEditModal}
                 onDelete={handleDeleteTransaction}
-                onBack={() => setCurrentScreen('DataEntry')}
+                onBack={() => navigate('DataEntry')}
               />
             : <ProfileScreen 
                 userName={userName} 
@@ -203,13 +222,13 @@ export default function App() {
                 onFullReset={handleFullReset}
               />
           }
-        </View>
+        </Animated.View>
 
         {/* Bottom Navigation Bar */}
         <View style={styles.navBar}>
           <TouchableOpacity 
             style={styles.navBtn}
-            onPress={() => setCurrentScreen('DataEntry')}
+            onPress={() => navigate('DataEntry')}
           >
             <Ionicons 
               name={currentScreen === 'DataEntry' ? 'home' : 'home-outline'} 
@@ -221,7 +240,7 @@ export default function App() {
           
           <TouchableOpacity 
             style={styles.navBtn}
-            onPress={() => setCurrentScreen('Charts')}
+            onPress={() => navigate('Charts')}
           >
             <Ionicons 
               name={currentScreen === 'Charts' ? 'stats-chart' : 'stats-chart-outline'} 
@@ -243,7 +262,7 @@ export default function App() {
 
           <TouchableOpacity 
             style={styles.navBtn}
-            onPress={() => setCurrentScreen('Calendar')}
+            onPress={() => navigate('Calendar')}
           >
             <Ionicons 
               name={currentScreen === 'Calendar' ? 'calendar' : 'calendar-outline'} 
@@ -255,7 +274,7 @@ export default function App() {
 
           <TouchableOpacity 
             style={styles.navBtn}
-            onPress={() => setCurrentScreen('Profile')}
+            onPress={() => navigate('Profile')}
           >
             <Ionicons 
               name={currentScreen === 'Profile' ? 'person' : 'person-outline'} 

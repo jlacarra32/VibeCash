@@ -18,6 +18,9 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
     }).slice().reverse();
   }, [transactions, search, typeFilter, selectedCategory]);
 
+  const filteredIncome = filteredTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+  const filteredExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+
   const allCats = typeFilter === 'income' ? incomeCategories : (typeFilter === 'expense' ? categories : [...categories, ...incomeCategories]);
   // Remove duplicates if any (by id)
   const uniqueCats = Array.from(new Map(allCats.map(item => [item.id, item])).values());
@@ -33,6 +36,24 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Explorador</Text>
         <View style={{width: 40}} />
+      </View>
+
+      {/* Summary strip */}
+      <View style={styles.summaryStrip}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Resultados</Text>
+          <Text style={styles.summaryValueNeutral}>{filteredTransactions.length}</Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Ingresos</Text>
+          <Text style={[styles.summaryValue, { color: THEME.colors.success }]}>+{filteredIncome.toFixed(0)}€</Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Gastos</Text>
+          <Text style={[styles.summaryValue, { color: THEME.colors.error }]}>-{filteredExpense.toFixed(0)}€</Text>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -96,32 +117,42 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
       </View>
 
       <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-        {filteredTransactions.map(tx => (
-          <View key={tx.id} style={styles.transactionCard}>
-            <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type, categories, incomeCategories) + '15' }]}>
-              <Ionicons name={getCategoryIcon(tx.category, tx.type, categories, incomeCategories)} size={22} color={getCategoryColor(tx.category, tx.type, categories, incomeCategories)} />
-            </View>
-            
-            <View style={styles.txInfo}>
-              <Text style={styles.txTitle}>{tx.description}</Text>
-              <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
-            </View>
+        {filteredTransactions.map(tx => {
+          const catColor = getCategoryColor(tx.category, tx.type, categories, incomeCategories);
+          const catIcon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
+          const isIncome = tx.type === 'income';
+          return (
+            <View key={tx.id} style={styles.transactionCard}>
+              <View style={[styles.txIconContainer, { backgroundColor: catColor + '18' }]}>
+                <Ionicons name={catIcon} size={22} color={catColor} />
+              </View>
 
-            <View style={styles.txRight}>
-              <Text style={[styles.txAmount, { color: tx.type === 'income' ? THEME.colors.success : THEME.colors.textPrimary }]}>
-                {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}€
-              </Text>
-              <View style={styles.txActions}>
-                <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
-                  <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => onDelete(tx.id)} style={styles.txActionBtn}>
-                  <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
-                </TouchableOpacity>
+              <View style={styles.txInfo}>
+                <Text style={styles.txTitle}>{tx.description}</Text>
+                <View style={styles.txMeta}>
+                  <View style={[styles.catChip, { backgroundColor: catColor + '18' }]}>
+                    <Text style={[styles.catChipText, { color: catColor }]}>{tx.category}</Text>
+                  </View>
+                  <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
+                </View>
+              </View>
+
+              <View style={styles.txRight}>
+                <Text style={[styles.txAmount, { color: isIncome ? THEME.colors.success : THEME.colors.error }]}>
+                  {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
+                </Text>
+                <View style={styles.txActions}>
+                  <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
+                    <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => onDelete(tx.id)} style={styles.txActionBtn}>
+                    <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
 
         {filteredTransactions.length === 0 && (
           <View style={styles.emptyState}>
@@ -145,7 +176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   backBtn: {
     width: 40,
@@ -265,11 +296,64 @@ const styles = StyleSheet.create({
     color: THEME.colors.textPrimary,
     fontSize: 15,
     fontWeight: '700',
+    marginBottom: 4,
+  },
+  txMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  catChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  catChipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   txDate: {
     color: THEME.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+  },
+  summaryStrip: {
+    flexDirection: 'row',
+    marginHorizontal: 25,
+    marginBottom: 16,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    overflow: 'hidden',
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginVertical: 10,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 3,
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  summaryValueNeutral: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFF',
   },
   txRight: {
     alignItems: 'flex-end',

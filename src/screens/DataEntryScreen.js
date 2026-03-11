@@ -70,8 +70,11 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
           <Text style={styles.heroLabel}>
             Balance {timeFilter === 'all' ? 'Total' : timeFilter === 'week' ? 'de la Semana' : timeFilter === 'month' ? 'del Mes' : 'del Año'}
           </Text>
-          <Animated.Text style={[styles.heroAmount, { opacity: balanceAnim }]}>
-            {cashFlow.netBalance.toFixed(2)}€
+          <Animated.Text style={[
+            styles.heroAmount,
+            { opacity: balanceAnim, color: cashFlow.netBalance >= 0 ? '#4ADE80' : '#FC8181' }
+          ]}>
+            {cashFlow.netBalance >= 0 ? '+' : ''}{cashFlow.netBalance.toFixed(2)}€
           </Animated.Text>
           
           <View style={styles.heroStats}>
@@ -115,32 +118,42 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
               <Text style={styles.verTodoLink}>Ver Todo</Text>
             </TouchableOpacity>
           </View>
-          {(cashFlow.transactions || []).slice().reverse().slice(0, 15).map(tx => (
-            <View key={tx.id} style={styles.transactionCard}>
-              <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type, categories, incomeCategories) + '15' }]}>
-                <Ionicons name={getCategoryIcon(tx.category, tx.type, categories, incomeCategories)} size={22} color={getCategoryColor(tx.category, tx.type, categories, incomeCategories)} />
-              </View>
-              
-              <View style={styles.txInfo}>
-                <Text style={styles.txTitle}>{tx.description}</Text>
-                <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
-              </View>
+          {(cashFlow.transactions || []).slice().reverse().slice(0, 15).map(tx => {
+            const catColor = getCategoryColor(tx.category, tx.type, categories, incomeCategories);
+            const catIcon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
+            const isIncome = tx.type === 'income';
+            return (
+              <View key={tx.id} style={styles.transactionCard}>
+                <View style={[styles.txIconContainer, { backgroundColor: catColor + '18' }]}>
+                  <Ionicons name={catIcon} size={22} color={catColor} />
+                </View>
 
-              <View style={styles.txRight}>
-                <Text style={[styles.txAmount, { color: tx.type === 'income' ? THEME.colors.success : THEME.colors.textPrimary }]}>
-                  {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}€
-                </Text>
-                <View style={styles.txActions}>
-                  <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
-                    <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteTransaction(tx.id)} style={styles.txActionBtn}>
-                    <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
-                  </TouchableOpacity>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txTitle}>{tx.description}</Text>
+                  <View style={styles.txMeta}>
+                    <View style={[styles.catChip, { backgroundColor: catColor + '18' }]}>
+                      <Text style={[styles.catChipText, { color: catColor }]}>{tx.category}</Text>
+                    </View>
+                    <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.txRight}>
+                  <Text style={[styles.txAmount, { color: isIncome ? THEME.colors.success : THEME.colors.error }]}>
+                    {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
+                  </Text>
+                  <View style={styles.txActions}>
+                    <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
+                      <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteTransaction(tx.id)} style={styles.txActionBtn}>
+                      <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
           {transactions.length === 0 && (
             <View style={styles.emptyState}>
               <Ionicons name="receipt-outline" size={48} color={THEME.colors.border} />
@@ -317,11 +330,27 @@ const styles = StyleSheet.create({
     color: THEME.colors.textPrimary,
     fontSize: 15,
     fontWeight: '700',
+    marginBottom: 4,
+  },
+  txMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  catChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  catChipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   txDate: {
     color: THEME.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
   },
   txRight: {
     alignItems: 'flex-end',
