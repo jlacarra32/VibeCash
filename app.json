@@ -23,10 +23,14 @@
     },
     "web": {
       "favicon": "./assets/images/favicon.png",
+      "icon": "./assets/images/icon.png",
       "backgroundColor": "#0F172A",
-      "themeColor": "#0F172A",
+      "themeColor": "#6C63FF",
+      "name": "VibeCash",
+      "shortName": "VibeCash",
       "description": "VibeCash - Tu control de gastos con estilo",
-      "display": "standalone"
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       [
