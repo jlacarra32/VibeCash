@@ -70,48 +70,50 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [categories, setCategories] = useState(CATEGORIES);
   const [incomeCategories, setIncomeCategories] = useState(INCOME_CATEGORIES);
+  const [isLoaded, setIsLoaded] = useState(false); // Bandera para evitar guardados basura antes de cargar
 
-  // Cargar datos al iniciar
   useEffect(() => {
-    loadData('user_transactions').then(data => {
-      if (data) setTransactions(data);
-    });
-    loadData('user_name').then(name => {
+    Promise.all([
+      loadData('user_transactions'),
+      loadData('user_name'),
+      loadData('user_categories'),
+      loadData('user_income_categories'),
+      loadData('has_seen_welcome')
+    ]).then(([txs, name, cats, incCats, seen]) => {
+      if (txs) setTransactions(txs);
       if (name) setUserName(name);
-    });
-    loadData('user_categories').then(cats => {
       if (cats) setCategories(cats);
-    });
-    loadData('user_income_categories').then(cats => {
-      if (cats) setIncomeCategories(cats);
-    });
-    loadData('has_seen_welcome').then(seen => {
+      if (incCats) setIncomeCategories(incCats);
       if (seen) setHasSeenWelcome(seen);
+      setIsLoaded(true); // Ya podemos guardar de forma segura
     });
   }, []);
 
-  // Guardar datos cuando cambien
+  // Guardar datos cuando cambien - SOLO si ya se ha cargado inicialmente
   useEffect(() => {
+    if (!isLoaded) return;
     saveData('user_transactions', transactions);
-  }, [transactions]);
+  }, [transactions, isLoaded]);
 
   useEffect(() => {
-    if (userName) {
-      saveData('user_name', userName);
-    }
-  }, [userName]);
+    if (!isLoaded || !userName) return;
+    saveData('user_name', userName);
+  }, [userName, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     saveData('user_categories', categories);
-  }, [categories]);
+  }, [categories, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     saveData('user_income_categories', incomeCategories);
-  }, [incomeCategories]);
+  }, [incomeCategories, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     saveData('has_seen_welcome', hasSeenWelcome);
-  }, [hasSeenWelcome]);
+  }, [hasSeenWelcome, isLoaded]);
 
   const handleSaveTransaction = (tx) => {
     setTransactions(prev => {
