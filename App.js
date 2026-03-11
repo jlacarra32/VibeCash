@@ -3,6 +3,7 @@ import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Alert, Platform, T
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Analytics } from '@vercel/analytics/react';
 import { THEME, CATEGORIES, INCOME_CATEGORIES } from './src/constants/theme';
 import DataEntryScreen from './src/screens/DataEntryScreen';
 import ChartsScreen from './src/screens/ChartsScreen';
@@ -330,6 +331,7 @@ export default function App() {
           categories={categories}
           incomeCategories={incomeCategories}
         />
+        {Platform.OS === 'web' && <Analytics />}
       </SafeAreaView>
     </SafeAreaProvider>
   );
