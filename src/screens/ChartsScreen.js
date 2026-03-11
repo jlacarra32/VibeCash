@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TOP = Platform.OS === 'web' ? 20 : 50;
 
 // ─── Tiny donut ring using stacked arcs ─────────────────────────────────────
 function DonutSegments({ categories, categoryTotals, total, size = 130 }) {
@@ -463,7 +465,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 25,
-    paddingTop: 60,
+    paddingTop: TOP,
     paddingBottom: 16,
   },
   headerTitle: {
@@ -646,7 +648,7 @@ const styles = StyleSheet.create({
   emptyWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 60,
+    paddingTop: TOP,
     gap: 10,
   },
   emptyTitle: {

@@ -4,9 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
 
+const TOP = Platform.OS === 'web' ? 20 : 50;
+
 export default function HistoryScreen({ transactions, categories, incomeCategories, onEdit, onDelete, onBack }) {
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'expense', 'income'
+  const [typeFilter, setTypeFilter] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const filteredTransactions = useMemo(() => {
@@ -21,21 +23,22 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
   const filteredIncome = filteredTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const filteredExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
 
-  const allCats = typeFilter === 'income' ? incomeCategories : (typeFilter === 'expense' ? categories : [...categories, ...incomeCategories]);
-  // Remove duplicates if any (by id)
+  const allCats = typeFilter === 'income'
+    ? incomeCategories
+    : typeFilter === 'expense'
+    ? categories
+    : [...categories, ...incomeCategories];
   const uniqueCats = Array.from(new Map(allCats.map(item => [item.id, item])).values());
-
-
 
   return (
     <View style={styles.container}>
-      {/* Header with Back button */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={22} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Explorador</Text>
-        <View style={{width: 40}} />
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Summary strip */}
@@ -56,110 +59,132 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
         </View>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color={THEME.colors.textSecondary} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar descripción..."
-          placeholderTextColor={THEME.colors.textSecondary}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search !== '' && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={20} color={THEME.colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Scrollable filters + list together */}
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-      {/* Type Filters */}
-      <View style={styles.typeFilterRow}>
-        {['all', 'expense', 'income'].map(t => (
-          <TouchableOpacity 
-            key={t}
-            style={[styles.typeChip, typeFilter === t && styles.typeChipActive]}
-            onPress={() => { setTypeFilter(t); setSelectedCategory(null); }}
-          >
-            <Text style={[styles.typeChipText, typeFilter === t && styles.typeChipTextActive]}>
-              {t === 'all' ? 'Todos' : t === 'expense' ? 'Gastos' : 'Ingresos'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={18} color={THEME.colors.textSecondary} style={{ marginRight: 10 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar descripción..."
+            placeholderTextColor={THEME.colors.textSecondary}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search !== '' && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={18} color={THEME.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-      {/* Category Filter Scroll */}
-      <View style={{ marginBottom: 20 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
-          <TouchableOpacity 
-            style={[styles.catChip, !selectedCategory && styles.catChipActive]}
-            onPress={() => setSelectedCategory(null)}
-          >
-            <Text style={[styles.catChipText, !selectedCategory && styles.catChipTextActive]}>Todas</Text>
-          </TouchableOpacity>
-          {uniqueCats.map(cat => (
-            <TouchableOpacity 
-              key={cat.id}
-              style={[
-                styles.catChip, 
-                selectedCategory === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }
-              ]}
-              onPress={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+        {/* Type Filters */}
+        <View style={styles.typeFilterRow}>
+          {[
+            { key: 'all', label: 'Todos', icon: 'layers-outline' },
+            { key: 'expense', label: 'Gastos', icon: 'trending-down-outline' },
+            { key: 'income', label: 'Ingresos', icon: 'trending-up-outline' },
+          ].map(f => (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.typeChip, typeFilter === f.key && styles.typeChipActive]}
+              onPress={() => { setTypeFilter(f.key); setSelectedCategory(null); }}
             >
-              <Ionicons name={cat.icon} size={16} color={selectedCategory === cat.id ? cat.color : THEME.colors.textSecondary} />
-              <Text style={[
-                styles.catChipText, 
-                selectedCategory === cat.id && { color: cat.color, fontWeight: '800' }
-              ]}>{cat.id}</Text>
+              <Ionicons
+                name={f.icon}
+                size={14}
+                color={typeFilter === f.key ? '#FFF' : THEME.colors.textSecondary}
+              />
+              <Text style={[styles.typeChipText, typeFilter === f.key && styles.typeChipTextActive]}>
+                {f.label}
+              </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-      </View>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-        {filteredTransactions.map(tx => {
-          const catColor = getCategoryColor(tx.category, tx.type, categories, incomeCategories);
-          const catIcon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
-          const isIncome = tx.type === 'income';
-          return (
-            <View key={tx.id} style={styles.transactionCard}>
-              <View style={[styles.txIconContainer, { backgroundColor: catColor + '18' }]}>
-                <Ionicons name={catIcon} size={22} color={catColor} />
+        {/* Category filter grid — wrapped, vertical scroll */}
+        <View style={styles.catSection}>
+          <Text style={styles.catSectionLabel}>Categoría</Text>
+          <View style={styles.catGrid}>
+            <TouchableOpacity
+              style={[styles.catCard, !selectedCategory && styles.catCardActive]}
+              onPress={() => setSelectedCategory(null)}
+            >
+              <View style={[styles.catCardIcon, !selectedCategory && { backgroundColor: THEME.colors.accent + '30' }]}>
+                <Ionicons name="apps-outline" size={18} color={!selectedCategory ? THEME.colors.accent : THEME.colors.textSecondary} />
               </View>
+              <Text style={[styles.catCardText, !selectedCategory && { color: THEME.colors.accent }]}>Todas</Text>
+            </TouchableOpacity>
 
-              <View style={styles.txInfo}>
-                <Text style={styles.txTitle}>{tx.description}</Text>
-                <View style={styles.txMeta}>
-                  <View style={[styles.catChip, { backgroundColor: catColor + '18' }]}>
-                    <Text style={[styles.catChipText, { color: catColor }]}>{tx.category}</Text>
+            {uniqueCats.map(cat => {
+              const isActive = selectedCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.catCard, isActive && { borderColor: cat.color, backgroundColor: cat.color + '12' }]}
+                  onPress={() => setSelectedCategory(isActive ? null : cat.id)}
+                >
+                  <View style={[styles.catCardIcon, { backgroundColor: cat.color + (isActive ? '30' : '15') }]}>
+                    <Ionicons name={cat.icon || 'ellipse-outline'} size={18} color={cat.color} />
                   </View>
-                  <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
-                </View>
-              </View>
-
-              <View style={styles.txRight}>
-                <Text style={[styles.txAmount, { color: isIncome ? THEME.colors.success : THEME.colors.error }]}>
-                  {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
-                </Text>
-                <View style={styles.txActions}>
-                  <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
-                    <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => onDelete(tx.id)} style={styles.txActionBtn}>
-                    <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          );
-        })}
-
-        {filteredTransactions.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="search" size={60} color={THEME.colors.border} />
-            <Text style={styles.emptyText}>No se encontraron movimientos</Text>
+                  <Text style={[styles.catCardText, isActive && { color: cat.color, fontWeight: '800' }]}>
+                    {cat.id}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        )}
+        </View>
+
+        {/* Transaction list */}
+        <View style={styles.listContent}>
+          {filteredTransactions.map(tx => {
+            const catColor = getCategoryColor(tx.category, tx.type, categories, incomeCategories);
+            const catIcon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
+            const isIncome = tx.type === 'income';
+            return (
+              <View key={tx.id} style={styles.transactionCard}>
+                <View style={[styles.txIconContainer, { backgroundColor: catColor + '18' }]}>
+                  <Ionicons name={catIcon} size={22} color={catColor} />
+                </View>
+
+                <View style={styles.txInfo}>
+                  <Text style={styles.txTitle}>{tx.description}</Text>
+                  <View style={styles.txMeta}>
+                    <View style={[styles.txCatChip, { backgroundColor: catColor + '18' }]}>
+                      <Text style={[styles.txCatChipText, { color: catColor }]}>{tx.category}</Text>
+                    </View>
+                    <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.txRight}>
+                  <Text style={[styles.txAmount, { color: isIncome ? THEME.colors.success : THEME.colors.error }]}>
+                    {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
+                  </Text>
+                  <View style={styles.txActions}>
+                    <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
+                      <Ionicons name="pencil-outline" size={15} color={THEME.colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => onDelete(tx.id)} style={styles.txActionBtn}>
+                      <Ionicons name="trash-outline" size={15} color={THEME.colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+
+          {filteredTransactions.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="search" size={52} color={THEME.colors.border} style={{ opacity: 0.4 }} />
+              <Text style={styles.emptyTitle}>Sin resultados</Text>
+              <Text style={styles.emptyText}>Prueba con otro filtro o búsqueda</Text>
+            </View>
+          )}
+        </View>
+
       </ScrollView>
     </View>
   );
@@ -171,16 +196,16 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.background,
   },
   header: {
-    paddingTop: 60,
-    paddingHorizontal: 25,
+    paddingTop: TOP,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: THEME.colors.surface,
     justifyContent: 'center',
@@ -193,37 +218,74 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FFF',
   },
+  summaryStrip: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    overflow: 'hidden',
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginVertical: 8,
+  },
+  summaryLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: THEME.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  summaryValueNeutral: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#FFF',
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: THEME.colors.surface,
-    marginHorizontal: 25,
-    borderRadius: 18,
-    paddingHorizontal: 15,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    marginBottom: 20,
-  },
-  searchIcon: {
-    marginRight: 10,
+    marginBottom: 14,
+    height: 48,
   },
   searchInput: {
     flex: 1,
-    height: 55,
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
   },
   typeFilterRow: {
     flexDirection: 'row',
-    paddingHorizontal: 25,
-    gap: 10,
-    marginBottom: 15,
+    paddingHorizontal: 20,
+    gap: 8,
+    marginBottom: 18,
   },
   typeChip: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 12,
     backgroundColor: THEME.colors.surface,
     borderWidth: 1,
     borderColor: THEME.colors.border,
@@ -234,67 +296,86 @@ const styles = StyleSheet.create({
   },
   typeChipText: {
     color: THEME.colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   typeChipTextActive: {
     color: '#FFF',
   },
-  catScroll: {
-    paddingHorizontal: 25,
+  // Category grid
+  catSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  catSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  catGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
-  catChip: {
+  catCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: THEME.colors.surface,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
     gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    backgroundColor: THEME.colors.surface,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.border,
   },
-  catChipActive: {
+  catCardActive: {
     borderColor: THEME.colors.accent,
+    backgroundColor: THEME.colors.accent + '12',
   },
-  catChipText: {
-    color: THEME.colors.textSecondary,
+  catCardIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  catCardText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: THEME.colors.textSecondary,
   },
-  catChipTextActive: {
-    color: THEME.colors.accent,
-    fontWeight: '800',
-  },
+  // Transaction list
   listContent: {
-    paddingHorizontal: 25,
+    paddingHorizontal: 20,
     paddingBottom: 120,
   },
   transactionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: THEME.colors.surface,
-    padding: 16,
-    borderRadius: 22,
-    marginBottom: 12,
+    padding: 14,
+    borderRadius: 20,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: THEME.colors.border,
   },
   txIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   txInfo: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 12,
   },
   txTitle: {
     color: THEME.colors.textPrimary,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
   },
@@ -303,12 +384,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  catChip: {
-    paddingHorizontal: 8,
+  txCatChip: {
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  catChipText: {
+  txCatChipText: {
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -318,67 +399,35 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
     fontSize: 11,
   },
-  summaryStrip: {
-    flexDirection: 'row',
-    marginHorizontal: 25,
-    marginBottom: 16,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-    overflow: 'hidden',
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    marginVertical: 10,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 3,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  summaryValueNeutral: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#FFF',
-  },
   txRight: {
     alignItems: 'flex-end',
   },
   txAmount: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
   },
   txActions: {
     flexDirection: 'row',
-    marginTop: 6,
+    marginTop: 5,
+    gap: 4,
   },
   txActionBtn: {
-    padding: 4,
-    marginLeft: 8,
+    padding: 5,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 60,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: THEME.colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '800',
   },
   emptyText: {
     color: THEME.colors.textSecondary,
-    fontSize: 14,
-    marginTop: 15,
-    fontWeight: '600',
-  }
+    fontSize: 13,
+    opacity: 0.6,
+  },
 });
