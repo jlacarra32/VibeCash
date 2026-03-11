@@ -42,6 +42,8 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('DataEntry');
   const [transactions, setTransactions] = useState([]);
   const [userName, setUserName] = useState(null);
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const [tempUserName, setTempUserName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -61,6 +63,9 @@ export default function App() {
     });
     loadData('user_income_categories').then(cats => {
       if (cats) setIncomeCategories(cats);
+    });
+    loadData('has_seen_welcome').then(seen => {
+      if (seen) setHasSeenWelcome(seen);
     });
   }, []);
 
@@ -83,6 +88,10 @@ export default function App() {
     saveData('user_income_categories', incomeCategories);
   }, [incomeCategories]);
 
+  useEffect(() => {
+    saveData('has_seen_welcome', hasSeenWelcome);
+  }, [hasSeenWelcome]);
+
   const handleSaveTransaction = (tx) => {
     setTransactions(prev => {
       const exists = prev.find(t => t.id === tx.id);
@@ -104,9 +113,14 @@ export default function App() {
     setModalVisible(true);
   };
 
-  const handleFinishOnboarding = () => {
-    if (tempUserName.trim()) {
-      setUserName(tempUserName.trim());
+  const handleNextOnboarding = () => {
+    if (onboardingStep < 2) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      if (tempUserName.trim()) {
+        setUserName(tempUserName.trim());
+        setHasSeenWelcome(true);
+      }
     }
   };
 
@@ -204,22 +218,82 @@ export default function App() {
         </View>
 
         {/* Onboarding Overlay */}
-        {!userName && (
+        {!hasSeenWelcome && (
           <View style={styles.onboardingOverlay}>
             <View style={styles.onboardingCard}>
-              <Text style={styles.onboardingTitle}>Bienvenido a VibeCash</Text>
-              <Text style={styles.onboardingSub}>Para empezar, ¿cómo te llamas?</Text>
-              <TextInput
-                style={styles.onboardingInput}
-                placeholder="Tu nombre aquí..."
-                placeholderTextColor={THEME.colors.textSecondary}
-                value={tempUserName}
-                onChangeText={setTempUserName}
-                autoFocus
-              />
-              <TouchableOpacity style={styles.onboardingBtn} onPress={handleFinishOnboarding}>
-                <Text style={styles.onboardingBtnText}>Empezar</Text>
+              {onboardingStep === 0 && (
+                <View style={{ alignItems: 'center' }}>
+                  <View style={styles.welcomeIconCircle}>
+                    <Text style={{ fontSize: 60 }}>💰</Text>
+                  </View>
+                  <Text style={styles.onboardingTitle}>Bienvenido a VibeCash</Text>
+                  <Text style={styles.signatureBadge}>By Javier Lacarra Rubio</Text>
+                  <Text style={styles.onboardingSub}>
+                    Controla tus gastos con estilo. Una aplicación diseñada para que gestionar tu dinero sea tan vibrante como tu vida.
+                  </Text>
+                </View>
+              )}
+
+              {onboardingStep === 1 && (
+                <View style={{ width: '100%' }}>
+                  <Text style={styles.onboardingTitle}>¿Qué puedes hacer?</Text>
+                  <View style={styles.featureRow}>
+                    <Text style={styles.featureEmoji}>📈</Text>
+                    <View>
+                      <Text style={styles.featureName}>Análisis Visual</Text>
+                      <Text style={styles.featureDesc}>Mira tus gastos en gráficas limpias.</Text>
+                    </View>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Text style={styles.featureEmoji}>🗓️</Text>
+                    <View>
+                      <Text style={styles.featureName}>Calendario</Text>
+                      <Text style={styles.featureDesc}>No pierdas de vista ningún día.</Text>
+                    </View>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Text style={styles.featureEmoji}>🎨</Text>
+                    <View>
+                      <Text style={styles.featureName}>Personalización</Text>
+                      <Text style={styles.featureDesc}>Crea categorías con tus emojis favoritos.</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {onboardingStep === 2 && (
+                <View style={{ width: '100%', alignItems: 'center' }}>
+                  <Text style={styles.onboardingTitle}>Último paso</Text>
+                  <Text style={styles.onboardingSub}>¿Cómo quieres que te llamemos?</Text>
+                  <TextInput
+                    style={styles.onboardingInput}
+                    placeholder="Tu nombre aquí..."
+                    placeholderTextColor={THEME.colors.textSecondary}
+                    value={tempUserName}
+                    onChangeText={setTempUserName}
+                    autoFocus
+                  />
+                </View>
+              )}
+
+              <TouchableOpacity 
+                style={[styles.onboardingBtn, onboardingStep === 2 && !tempUserName.trim() && { opacity: 0.5 }]} 
+                onPress={handleNextOnboarding}
+                disabled={onboardingStep === 2 && !tempUserName.trim()}
+              >
+                <Text style={styles.onboardingBtnText}>
+                  {onboardingStep < 2 ? 'Siguiente' : '¡Empezar ahora!'}
+                </Text>
               </TouchableOpacity>
+              
+              <View style={styles.stepIndicator}>
+                {[0, 1, 2].map(s => (
+                  <View 
+                    key={s} 
+                    style={[styles.stepDot, onboardingStep === s && styles.stepDotActive]} 
+                  />
+                ))}
+              </View>
             </View>
           </View>
         )}
@@ -342,5 +416,62 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '800',
+  },
+  welcomeIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: THEME.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 25,
+    borderWidth: 2,
+    borderColor: THEME.colors.accent,
+  },
+  signatureBadge: {
+    fontSize: 10,
+    color: THEME.colors.accent,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 20,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: THEME.colors.background,
+    padding: 15,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  featureEmoji: {
+    fontSize: 28,
+    marginRight: 15,
+  },
+  featureName: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  featureDesc: {
+    color: THEME.colors.textSecondary,
+    fontSize: 12,
+  },
+  stepIndicator: {
+    flexDirection: 'row',
+    marginTop: 25,
+    gap: 8,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: THEME.colors.border,
+  },
+  stepDotActive: {
+    backgroundColor: THEME.colors.accent,
+    width: 20,
   }
 });

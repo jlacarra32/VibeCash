@@ -59,8 +59,9 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
       {/* Welcome Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.welcomeTitle}>¡Hola!</Text>
-          <Text style={styles.userName}>{userName || 'Usuario'}</Text>
+          <Text style={styles.brandTitle}>VibeCash</Text>
+          <Text style={styles.signatureText}>por Javier Lacarra Rubio</Text>
+          <Text style={styles.userName}>¡Hola, {userName || 'Usuario'}!</Text>
         </View>
         <View style={styles.topIconBtn}>
           <Ionicons name="leaf-outline" size={24} color={THEME.colors.accent} />
@@ -116,7 +117,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
           {(transactions || []).slice().reverse().map(tx => (
             <View key={tx.id} style={styles.transactionCard}>
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
-                <Text style={{fontSize: 18}}>{getCategoryIcon(tx.category, tx.type)}</Text>
+                <Text style={{fontSize: 24, textAlign: 'center'}}>{getCategoryIcon(tx.category, tx.type)}</Text>
               </View>
               
               <View style={styles.txInfo}>
@@ -163,15 +164,24 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  welcomeTitle: {
-    color: THEME.colors.textSecondary,
-    fontSize: 16,
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 1,
+  },
+  signatureText: {
+    fontSize: 10,
+    color: THEME.colors.accent,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    marginTop: -2,
+    marginBottom: 4,
   },
   userName: {
-    color: THEME.colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '800',
+    color: THEME.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   topIconBtn: {
     width: 45,

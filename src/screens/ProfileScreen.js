@@ -91,7 +91,7 @@ export default function ProfileScreen({
           <View style={styles.categoriesGrid}>
             {(categories || []).map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Text style={{fontSize: 14}}>{cat.icon}</Text>
+                <Text style={{fontSize: 20}}>{cat.icon}</Text>
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity onPress={() => {
                   setCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -106,7 +106,7 @@ export default function ProfileScreen({
           <View style={styles.categoriesGrid}>
             {(incomeCategories || []).map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Text style={{fontSize: 14}}>{cat.icon}</Text>
+                <Text style={{fontSize: 20}}>{cat.icon}</Text>
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity onPress={() => {
                   setIncomeCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -155,7 +155,7 @@ export default function ProfileScreen({
               />
 
               <TextInput
-                style={styles.input}
+                style={[styles.input, { fontSize: 30, textAlign: 'center' }]}
                 placeholder="Emoji (ej: 🏋️)"
                 placeholderTextColor={THEME.colors.textSecondary}
                 value={newCatEmoji}
@@ -201,7 +201,8 @@ export default function ProfileScreen({
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Sobre VibeCash</Text>
-          <Text style={styles.infoText}>Versión 1.3.0</Text>
+          <Text style={[styles.infoText, { fontWeight: '700', color: THEME.colors.accent, marginBottom: 10 }]}>Hecho por Javier Lacarra Rubio</Text>
+          <Text style={styles.infoText}>Versión 1.4.0</Text>
           <Text style={styles.infoText}>Tus datos y categorías se guardan localmente para tu privacidad.</Text>
         </View>
       </View>
