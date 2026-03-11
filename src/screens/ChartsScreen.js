@@ -73,7 +73,7 @@ export default function ChartsScreen({ transactions, categories }) {
                 </Animated.View>
               </View>
               <Text style={styles.barLabel}>Ingresos</Text>
-              <Text style={styles.barValue}>{cashFlow.totalIncome.toFixed(0)}€</Text>
+              <Text style={styles.barValue}>{cashFlow.totalIncome.toFixed(2)}€</Text>
             </View>
 
             {/* Expense Column */}
@@ -94,7 +94,7 @@ export default function ChartsScreen({ transactions, categories }) {
                 </Animated.View>
               </View>
               <Text style={styles.barLabel}>Gastos</Text>
-              <Text style={styles.barValue}>{displayExpense.toFixed(0)}€</Text>
+              <Text style={styles.barValue}>{displayExpense.toFixed(2)}€</Text>
             </View>
           </View>
 

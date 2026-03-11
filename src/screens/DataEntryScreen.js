@@ -30,16 +30,22 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
   const cashFlow = calculateCashFlow(transactions, timeFilter);
 
   const deleteTransaction = (id) => {
-    Alert.alert(
-      "Borrar Movimiento",
-      "¿Estás seguro de que quieres eliminar este registro?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Borrar", style: "destructive", onPress: () => {
-          setTransactions(prev => prev.filter(t => t.id !== id));
-        }}
-      ]
-    );
+    const performDelete = () => setTransactions(prev => prev.filter(t => t.id !== id));
+
+    if (Platform.OS === 'web') {
+      if (window.confirm("¿Estás seguro de que quieres eliminar este registro?")) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        "Borrar Movimiento",
+        "¿Estás seguro de que quieres eliminar este registro?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Borrar", style: "destructive", onPress: performDelete }
+        ]
+      );
+    }
   };
 
   const getCategoryIcon = (catId, type) => {
@@ -83,14 +89,14 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
               <Ionicons name="arrow-up-circle" size={20} color={THEME.colors.success} />
               <View style={{marginLeft: 8}}>
                 <Text style={styles.heroStatLabel}>Ingresos</Text>
-                <Text style={styles.heroStatValue}>{cashFlow.totalIncome.toFixed(0)}€</Text>
+                <Text style={styles.heroStatValue}>{cashFlow.totalIncome.toFixed(2)}€</Text>
               </View>
             </View>
             <View style={styles.heroStat}>
               <Ionicons name="arrow-down-circle" size={20} color={THEME.colors.error} />
               <View style={{marginLeft: 8}}>
                 <Text style={styles.heroStatLabel}>Gastos</Text>
-                <Text style={styles.heroStatValue}>{cashFlow.totalExpenseNet.toFixed(0)}€</Text>
+                <Text style={styles.heroStatValue}>{cashFlow.totalExpenseNet.toFixed(2)}€</Text>
               </View>
             </View>
           </View>

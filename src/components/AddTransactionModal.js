@@ -106,16 +106,15 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                 style={[styles.input, { flex: 1, marginBottom: 0 }]}
                 placeholder="0.00"
                 placeholderTextColor="#64748B"
-                keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
+                keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={(val) => {
-                  // Permitir solo números, un punto o una coma
-                  let formatted = val.replace(',', '.');
-                  // Evitar múltiples puntos
-                  if ((formatted.match(/\./g) || []).length > 1) return;
-                  // Solo permitir números y un punto
-                  if (formatted !== '' && !/^\d*\.?\d*$/.test(formatted)) return;
-                  setAmount(formatted);
+                  // Permitir números, puntos y comas
+                  // Solo permitir un separador (punto o coma)
+                  if ((val.split(/[.,]/).length - 1) > 1) return;
+                  // Regex que permite números y opcionalmente un punto o coma al final o en medio
+                  if (val !== '' && !/^\d*[.,]?\d*$/.test(val)) return;
+                  setAmount(val);
                 }}
               />
               {type === 'expense' && (
@@ -133,9 +132,13 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                   style={[styles.input, { marginTop: 15, borderColor: THEME.colors.accent }]}
                   placeholder="Tu parte (Dime solo cuánto pagas tú)"
                   placeholderTextColor="#64748B"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   value={myPart}
-                  onChangeText={setMyPart}
+                  onChangeText={(val) => {
+                    if ((val.split(/[.,]/).length - 1) > 1) return;
+                    if (val !== '' && !/^\d*[.,]?\d*$/.test(val)) return;
+                    setMyPart(val);
+                  }}
                />
             )}
 

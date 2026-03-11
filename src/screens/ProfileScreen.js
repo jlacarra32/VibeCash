@@ -2,6 +2,56 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
+import { Platform } from 'react-native';
+
+const ICON_MAP = {
+  gym: 'fitness-outline',
+  gimnasio: 'fitness-outline',
+  deporte: 'bicycle-outline',
+  entreno: 'barbell-outline',
+  comida: 'fast-food-outline',
+  restaurante: 'restaurant-outline',
+  bar: 'beer-outline',
+  super: 'cart-outline',
+  compra: 'basket-outline',
+  alquiler: 'home-outline',
+  casa: 'home-outline',
+  luz: 'flash-outline',
+  agua: 'water-outline',
+  internet: 'wifi-outline',
+  netflix: 'play-circle-outline',
+  musica: 'musical-notes-outline',
+  salud: 'medkit-outline',
+  medico: 'medical-outline',
+  farmacia: 'bandage-outline',
+  viaje: 'airplane-outline',
+  vuelo: 'airplane-outline',
+  hotel: 'bed-outline',
+  coche: 'car-outline',
+  gasolina: 'funnel-outline',
+  transporte: 'bus-outline',
+  tren: 'train-outline',
+  ropa: 'shirt-outline',
+  regalo: 'gift-outline',
+  ocio: 'game-controller-outline',
+  cine: 'film-outline',
+  fiesta: 'sparkles-outline',
+  nomina: 'cash-outline',
+  sueldo: 'cash-outline',
+  bizum: 'send-outline',
+  transferencia: 'swap-horizontal-outline',
+  ahorro: 'savings-outline',
+  inversion: 'trending-up-outline',
+  prestamo: 'wallet-outline',
+};
+
+const getSmartIcon = (name, type) => {
+  const lowerName = name.toLowerCase();
+  for (const key in ICON_MAP) {
+    if (lowerName.includes(key)) return ICON_MAP[key];
+  }
+  return type === 'income' ? 'cash-outline' : 'cart-outline';
+};
 
 export default function ProfileScreen({ 
   userName, 
@@ -68,14 +118,21 @@ export default function ProfileScreen({
           <TouchableOpacity 
             style={[styles.resetBtn, { marginBottom: 15 }]} 
             onPress={() => {
-              Alert.alert(
-                "Borrar Movimientos",
-                "¿Seguro que quieres borrar todos los gastos e ingresos? Mantendrás tu nombre y categorías.",
-                [
-                  { text: "Cancelar", style: "cancel" },
-                  { text: "Sí, Borrar", style: "destructive", onPress: () => setTransactions([]) }
-                ]
-              );
+              const performReset = () => setTransactions([]);
+              if (Platform.OS === 'web') {
+                if (window.confirm("¿Seguro que quieres borrar todos los gastos e ingresos? Mantendrás tu nombre y categorías.")) {
+                  performReset();
+                }
+              } else {
+                Alert.alert(
+                  "Borrar Movimientos",
+                  "¿Seguro que quieres borrar todos los gastos e ingresos? Mantendrás tu nombre y categorías.",
+                  [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Sí, Borrar", style: "destructive", onPress: performReset }
+                  ]
+                );
+              }
             }}
           >
             <Ionicons name="list-outline" size={20} color={THEME.colors.textPrimary} />
@@ -85,14 +142,20 @@ export default function ProfileScreen({
           <TouchableOpacity 
             style={[styles.resetBtn, { borderColor: THEME.colors.error }]} 
             onPress={() => {
-              Alert.alert(
-                "REINICIO TOTAL",
-                "Se borrará TODO: nombre, categorías y gastos. Volverás a la pantalla de bienvenida. ¿Estás seguro?",
-                [
-                  { text: "Cancelar", style: "cancel" },
-                  { text: "REINICIAR TODO", style: "destructive", onPress: onFullReset }
-                ]
-              );
+              if (Platform.OS === 'web') {
+                if (window.confirm("REINICIO TOTAL: Se borrará TODO (nombre, categorías y gastos). ¿Estás seguro?")) {
+                  onFullReset();
+                }
+              } else {
+                Alert.alert(
+                  "REINICIO TOTAL",
+                  "Se borrará TODO: nombre, categorías y gastos. Volverás a la pantalla de bienvenida. ¿Estás seguro?",
+                  [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "REINICIAR TODO", style: "destructive", onPress: onFullReset }
+                  ]
+                );
+              }
             }}
           >
             <Ionicons name="refresh-circle-outline" size={20} color={THEME.colors.error} />
@@ -196,7 +259,7 @@ export default function ProfileScreen({
                     const cat = { 
                       id: newCatName, 
                       color: newCatColor, 
-                      icon: newCatType === 'income' ? 'cash-outline' : 'cart-outline' 
+                      icon: getSmartIcon(newCatName, newCatType)
                     };
                     if (newCatType === 'income') setIncomeCategories([...incomeCategories, cat]);
                     else setCategories([...categories, cat]);
