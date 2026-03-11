@@ -8,14 +8,46 @@ import { calculateCashFlow } from '../logic/cashFlow';
 import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
 
 export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories, onGoToHistory }) {
-  const [timeFilter, setTimeFilter] = useState('month');
+  const [showBalance, setShowBalance] = useState(true);
+  const [displayBalance, setDisplayBalance] = useState(0);
   const balanceAnim = useRef(new Animated.Value(1)).current;
 
+  // Efecto para animar el balance cuando cambia
   useEffect(() => {
+    const cashFlow = calculateCashFlow(transactions, timeFilter);
+    const target = cashFlow.netBalance;
+    
+    // Animación de escala/opacidad
     Animated.sequence([
-      Animated.timing(balanceAnim, { toValue: 0.5, duration: 100, useNativeDriver: true }),
+      Animated.timing(balanceAnim, { toValue: 0.8, duration: 100, useNativeDriver: true }),
       Animated.timing(balanceAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
+
+    // Simulación de contador (micro-interacción)
+    let start = displayBalance;
+    const end = target;
+    if (start === end) return;
+    
+    const duration = 800;
+    const startTime = Date.now();
+    
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing out expo
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = start + (end - start) * easeProgress;
+      
+      setDisplayBalance(current);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
   }, [timeFilter, transactions]);
 
   const handleResetData = () => {
@@ -69,29 +101,55 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
         {/* Giant Balance Hero */}
         <View style={styles.balanceHero}>
+          <TouchableOpacity 
+            style={styles.eyeBtn} 
+            onPress={() => setShowBalance(!showBalance)}
+          >
+            <Ionicons 
+              name={showBalance ? "eye-outline" : "eye-off-outline"} 
+              size={18} 
+              color="rgba(255,255,255,0.6)" 
+            />
+          </TouchableOpacity>
+
           <Text style={styles.heroLabel}>
             Balance {timeFilter === 'all' ? 'Total' : timeFilter === 'week' ? 'de la Semana' : timeFilter === 'month' ? 'del Mes' : 'del Año'}
           </Text>
-          <Animated.Text style={[
-            styles.heroAmount,
-            { opacity: balanceAnim, color: cashFlow.netBalance >= 0 ? '#4ADE80' : '#FC8181' }
-          ]}>
-            {cashFlow.netBalance >= 0 ? '+' : ''}{cashFlow.netBalance.toFixed(2)}€
-          </Animated.Text>
+          
+          {showBalance ? (
+            <Animated.Text style={[
+              styles.heroAmount,
+              { 
+                opacity: balanceAnim, 
+                transform: [{ scale: balanceAnim }],
+                color: cashFlow.netBalance >= 0 ? '#4ADE80' : '#FC8181' 
+              }
+            ]}>
+              {displayBalance >= 0 ? '+' : ''}{displayBalance.toFixed(2)}€
+            </Animated.Text>
+          ) : (
+            <View style={styles.blurredBalanceContainer}>
+              <Text style={styles.blurredBalanceText}>••••••</Text>
+            </View>
+          )}
           
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>
               <Ionicons name="arrow-up-circle" size={20} color={THEME.colors.success} />
               <View style={{marginLeft: 8}}>
                 <Text style={styles.heroStatLabel}>Ingresos</Text>
-                <Text style={styles.heroStatValue}>{cashFlow.totalIncome.toFixed(2)}€</Text>
+                <Text style={styles.heroStatValue}>
+                  {showBalance ? `${cashFlow.totalIncome.toFixed(2)}€` : '•••€'}
+                </Text>
               </View>
             </View>
             <View style={styles.heroStat}>
               <Ionicons name="arrow-down-circle" size={20} color={THEME.colors.error} />
               <View style={{marginLeft: 8}}>
                 <Text style={styles.heroStatLabel}>Gastos</Text>
-                <Text style={styles.heroStatValue}>{cashFlow.totalExpenseNet.toFixed(2)}€</Text>
+                <Text style={styles.heroStatValue}>
+                  {showBalance ? `${cashFlow.totalExpenseNet.toFixed(2)}€` : '•••€'}
+                </Text>
               </View>
             </View>
           </View>
@@ -231,6 +289,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 1,
+    marginTop: 4,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    top: 20,
+    right: 25,
+    padding: 8,
+    zIndex: 10,
+  },
+  blurredBalanceContainer: {
+    height: 72, // Match actual height roughly
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 15,
+  },
+  blurredBalanceText: {
+    color: '#FFF',
+    fontSize: 48,
+    fontWeight: '900',
+    letterSpacing: 8,
   },
   heroAmount: {
     color: '#FFF',
