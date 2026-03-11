@@ -11,29 +11,47 @@ import CalendarScreen from './src/screens/CalendarScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 
 // Memoria de emergencia por si el móvil bloquea el almacenamiento
-let backupStorage = null;
+let backupStorage = {};
 
 const saveData = async (key, val) => {
   try {
     const jsonValue = JSON.stringify(val);
-    backupStorage = jsonValue; // Guardamos en memoria por si acaso
+    backupStorage[key] = jsonValue; // Guardamos en memoria por si acaso
+    
+    // DOBLE GUARDADO EXTREMO EN WEB: Usar localStorage directo como salvavidas
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, jsonValue);
+    }
+
     if (AsyncStorage && typeof AsyncStorage.setItem === 'function') {
       await AsyncStorage.setItem(key, jsonValue);
     }
   } catch (error) {
-    console.log("Aviso: Guardando en memoria temporal");
+    console.log("Aviso: Error de guardado principal, usando memoria temporal", error);
   }
 };
 
 const loadData = async (key) => {
   try {
+    let res = null;
     if (AsyncStorage && typeof AsyncStorage.getItem === 'function') {
-      const res = await AsyncStorage.getItem(key);
-      if (res) return JSON.parse(res);
+      res = await AsyncStorage.getItem(key);
     }
-    return backupStorage ? JSON.parse(backupStorage) : null;
+
+    // RESCATE EN WEB: Si AsyncStorage está vacío o falla, leer de localStorage directo
+    if (!res && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      res = window.localStorage.getItem(key);
+    }
+
+    if (res) return JSON.parse(res);
+    return backupStorage[key] ? JSON.parse(backupStorage[key]) : null;
   } catch (error) {
-    return backupStorage ? JSON.parse(backupStorage) : null;
+    console.log("Error crítico leyendo datos, intentando rescate", error);
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      let fallback = window.localStorage.getItem(key);
+      if (fallback) return JSON.parse(fallback);
+    }
+    return backupStorage[key] ? JSON.parse(backupStorage[key]) : null;
   }
 };
 
@@ -149,6 +167,11 @@ export default function App() {
 
   const handleFullReset = async () => {
     try {
+      // Limpiar todas las capas de persistencia para asegurar un reinicio limpio
+      backupStorage = {};
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.clear();
+      }
       await AsyncStorage.clear();
       setTransactions([]);
       setUserName(null);
