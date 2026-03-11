@@ -45,7 +45,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
   const getCategoryIcon = (catId, type) => {
     const list = (type === 'income' ? incomeCategories : categories) || [];
     const cat = list.find(c => c.id === catId);
-    return cat ? cat.icon : '📦';
+    return cat ? cat.icon : (type === 'income' ? 'cash-outline' : 'cart-outline');
   };
 
   const getCategoryColor = (catId, type) => {
@@ -117,7 +117,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
           {(transactions || []).slice().reverse().map(tx => (
             <View key={tx.id} style={styles.transactionCard}>
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
-                <Text style={{fontSize: 24, textAlign: 'center'}}>{getCategoryIcon(tx.category, tx.type)}</Text>
+                <Ionicons name={getCategoryIcon(tx.category, tx.type)} size={22} color={getCategoryColor(tx.category, tx.type)} />
               </View>
               
               <View style={styles.txInfo}>

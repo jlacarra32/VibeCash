@@ -87,7 +87,11 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
               onPress={() => setSelectedTx(item)}
             >
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(item.category, item.type, categories, incomeCategories) + '15' }]}>
-                <Text style={{fontSize: 18}}>{getCategoryIcon(item.category, item.type, categories, incomeCategories)}</Text>
+                <Ionicons 
+                  name={getCategoryIcon(item.category, item.type, categories, incomeCategories)} 
+                  size={22} 
+                  color={getCategoryColor(item.category, item.type, categories, incomeCategories)} 
+                />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.txDesc}>{item.description}</Text>
@@ -130,7 +134,12 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Categoría:</Text>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <Text style={{fontSize: 16, marginRight: 6}}>{getCategoryIcon(selectedTx.category, selectedTx.type, categories, incomeCategories)}</Text>
+                    <Ionicons 
+                      name={getCategoryIcon(selectedTx.category, selectedTx.type, categories, incomeCategories)} 
+                      size={18} 
+                      color={getCategoryColor(selectedTx.category, selectedTx.type, categories, incomeCategories)} 
+                      style={{marginRight: 6}}
+                    />
                     <Text style={styles.modalValue}>{selectedTx.category}</Text>
                   </View>
                 </View>
@@ -310,5 +319,5 @@ const getCategoryColor = (catId, type, categories, incomeCategories) => {
 const getCategoryIcon = (catId, type, categories, incomeCategories) => {
   const list = (type === 'income' ? incomeCategories : categories) || [];
   const cat = list.find(c => c.id === catId);
-  return cat ? cat.icon : '📦';
+  return cat ? cat.icon : (type === 'income' ? 'cash-outline' : 'cart-outline');
 };

@@ -124,6 +124,23 @@ export default function App() {
     }
   };
 
+  const handleFullReset = async () => {
+    try {
+      await AsyncStorage.clear();
+      setTransactions([]);
+      setUserName(null);
+      setTempUserName('');
+      setHasSeenWelcome(false);
+      setOnboardingStep(0);
+      setCategories(CATEGORIES);
+      setIncomeCategories(INCOME_CATEGORIES);
+      setCurrentScreen('DataEntry');
+      Alert.alert("Éxito", "La aplicación se ha reiniciado por completo.");
+    } catch (e) {
+      Alert.alert("Error", "No se pudo reiniciar la aplicación.");
+    }
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'right', 'left', 'bottom']}>
@@ -152,6 +169,7 @@ export default function App() {
                 setCategories={setCategories}
                 incomeCategories={incomeCategories}
                 setIncomeCategories={setIncomeCategories}
+                onFullReset={handleFullReset}
               />
           }
         </View>
@@ -231,6 +249,12 @@ export default function App() {
                   <Text style={styles.onboardingSub}>
                     Controla tus gastos con estilo. Una aplicación diseñada para que gestionar tu dinero sea tan vibrante como tu vida.
                   </Text>
+                  <View style={styles.privacyNote}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color={THEME.colors.success} style={{marginRight: 8}} />
+                    <Text style={styles.privacyText}>
+                      Tus datos se guardan <Text style={{fontWeight: 'bold'}}>solo en este dispositivo</Text>. El creador no tiene acceso a ellos en ningún momento.
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -473,5 +497,20 @@ const styles = StyleSheet.create({
   stepDotActive: {
     backgroundColor: THEME.colors.accent,
     width: 20,
+  },
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    padding: 15,
+    borderRadius: 15,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  privacyText: {
+    color: THEME.colors.textSecondary,
+    fontSize: 12,
+    flex: 1,
   }
 });

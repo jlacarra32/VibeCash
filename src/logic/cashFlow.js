@@ -14,9 +14,17 @@ export const calculateCashFlow = (transactions, filterType = 'all') => {
 
     const txDate = new Date(t.date);
     if (filterType === 'week') {
-      const msPerDay = 24 * 60 * 60 * 1000;
-      const daysDiff = (now - txDate) / msPerDay;
-      return daysDiff <= 7;
+      const d = new Date(now);
+      const day = d.getDay();
+      const diff = d.getDate() - (day === 0 ? 6 : day - 1);
+      const monday = new Date(d.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+      
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      
+      return txDate >= monday && txDate <= sunday;
     }
     if (filterType === 'month') {
       return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();

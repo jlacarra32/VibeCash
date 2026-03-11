@@ -10,13 +10,13 @@ export default function ProfileScreen({
   categories, 
   setCategories, 
   incomeCategories, 
-  setIncomeCategories 
+  setIncomeCategories,
+  onFullReset 
 }) {
   const [tempName, setTempName] = useState(userName || '');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState(THEME.colors.accent);
-  const [newCatEmoji, setNewCatEmoji] = useState('💰');
   const [newCatType, setNewCatType] = useState('expense');
 
   const COLORS = ['#8B5CF6', '#EC4899', '#F43F5E', '#10B981', '#3B82F6', '#F59E0B', '#64748B'];
@@ -32,11 +32,37 @@ export default function ProfileScreen({
 
   const handleResetData = () => {
     Alert.alert(
-      "Borrar Todo",
-      "¿Estás seguro de que quieres borrar todos tus movimientos? Esta acción no se puede deshacer.",
+      "Opciones de Borrado",
+      "¿Qué deseas hacer? Elige con cuidado.",
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Borrar", style: "destructive", onPress: () => setTransactions([]) }
+        { 
+          text: "Solo Movimientos", 
+          onPress: () => {
+            Alert.alert(
+              "Borrar Movimientos",
+              "Se eliminarán todos los registros de gastos e ingresos. ¿Continuar?",
+              [
+                { text: "No", style: "cancel" },
+                { text: "Sí, Borrar", style: "destructive", onPress: () => setTransactions([]) }
+              ]
+            );
+          } 
+        },
+        { 
+          text: "Reiniciar App (TODO)", 
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "REINICIO TOTAL",
+              "Se borrarán todos los datos, nombre y categorías. Volverás al inicio. ¿Estás seguro?",
+              [
+                { text: "Cancelar", style: "cancel" },
+                { text: "REINICIAR TODO", style: "destructive", onPress: onFullReset }
+              ]
+            );
+          }
+        }
       ]
     );
   };
@@ -91,7 +117,7 @@ export default function ProfileScreen({
           <View style={styles.categoriesGrid}>
             {(categories || []).map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Text style={{fontSize: 20}}>{cat.icon}</Text>
+                <Ionicons name={cat.icon || 'cart-outline'} size={18} color={cat.color} />
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity onPress={() => {
                   setCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -106,7 +132,7 @@ export default function ProfileScreen({
           <View style={styles.categoriesGrid}>
             {(incomeCategories || []).map(cat => (
               <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Text style={{fontSize: 20}}>{cat.icon}</Text>
+                <Ionicons name={cat.icon || 'cash-outline'} size={18} color={cat.color} />
                 <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity onPress={() => {
                   setIncomeCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -154,15 +180,6 @@ export default function ProfileScreen({
                 onChangeText={setNewCatName}
               />
 
-              <TextInput
-                style={[styles.input, { fontSize: 30, textAlign: 'center' }]}
-                placeholder="Emoji (ej: 🏋️)"
-                placeholderTextColor={THEME.colors.textSecondary}
-                value={newCatEmoji}
-                onChangeText={setNewCatEmoji}
-                maxLength={2}
-              />
-
               <Text style={styles.label}>Color</Text>
               <View style={styles.categoriesGrid}>
                 {COLORS.map(c => (
@@ -185,7 +202,11 @@ export default function ProfileScreen({
                   style={[styles.saveBtn, {flex: 1}]}
                   onPress={() => {
                     if (!newCatName) return;
-                    const cat = { id: newCatName, color: newCatColor, icon: newCatEmoji };
+                    const cat = { 
+                      id: newCatName, 
+                      color: newCatColor, 
+                      icon: newCatType === 'income' ? 'cash-outline' : 'cart-outline' 
+                    };
                     if (newCatType === 'income') setIncomeCategories([...incomeCategories, cat]);
                     else setCategories([...categories, cat]);
                     setIsAddModalVisible(false);

@@ -32,17 +32,18 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
   }, [initialData, visible]);
 
   const handleSave = () => {
-    if (!description || !amount) {
-      alert("Por favor rellena description y monto");
+    const normalizedAmount = amount.replace(',', '.');
+    if (!description || !normalizedAmount || isNaN(parseFloat(normalizedAmount))) {
+      alert("Por favor rellena descripción y un monto válido");
       return;
     }
 
     const newTx = {
       id: initialData ? initialData.id : Date.now().toString(),
       description,
-      amount: parseFloat(amount),
+      amount: parseFloat(normalizedAmount),
       isShared: type === 'expense' ? isShared : false,
-      myPart: (type === 'expense' && isShared) ? parseFloat(myPart) : parseFloat(amount),
+      myPart: (type === 'expense' && isShared) ? parseFloat(myPart.replace(',', '.') || normalizedAmount) : parseFloat(normalizedAmount),
       type,
       category,
       date: date.toISOString(),
@@ -107,7 +108,15 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                 placeholderTextColor="#64748B"
                 keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
                 value={amount}
-                onChangeText={(val) => setAmount(val.replace(',', '.'))}
+                onChangeText={(val) => {
+                  // Permitir solo números, un punto o una coma
+                  let formatted = val.replace(',', '.');
+                  // Evitar múltiples puntos
+                  if ((formatted.match(/\./g) || []).length > 1) return;
+                  // Solo permitir números y un punto
+                  if (formatted !== '' && !/^\d*\.?\d*$/.test(formatted)) return;
+                  setAmount(formatted);
+                }}
               />
               {type === 'expense' && (
                 <TouchableOpacity 
@@ -139,7 +148,11 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                   style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
                   onPress={() => setCategory(cat.id)}
                 >
-                  <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+                  <Ionicons 
+                    name={cat.icon || (type === 'income' ? 'cash-outline' : 'cart-outline')} 
+                    size={20} 
+                    color={category === cat.id ? cat.color : '#64748B'} 
+                  />
                   <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
                 </TouchableOpacity>
               ))}
