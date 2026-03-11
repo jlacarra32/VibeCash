@@ -1,213 +1,61 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Modal } from 'react-native';
+import {
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  Alert, ScrollView, Modal, Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
-import { Platform } from 'react-native';
+
+const TOP = Platform.OS === 'web' ? 20 : 50;
 
 const ICON_MAP = {
-  // INGRESOS Y FINANZAS
-  nomina: 'cash-outline',
-  sueldo: 'cash-outline',
-  paga: 'cash-outline',
-  bizum: 'send-outline',
-  transferencia: 'swap-horizontal-outline',
-  ahorro: 'savings-outline',
-  inversion: 'trending-up-outline',
-  acciones: 'stats-chart-outline',
-  prestamo: 'wallet-outline',
-  hacienda: 'document-text-outline',
-  devolucion: 'refresh-outline',
-  interes: 'trending-up-outline',
-  venta: 'pricetag-outline',
-  extra: 'gift-outline',
-
-  // COMIDA Y BEBIDA
-  comida: 'fast-food-outline',
-  restaurante: 'restaurant-outline',
-  bar: 'beer-outline',
-  cafe: 'cafe-outline',
-  desayuno: 'cafe-outline',
-  copa: 'wine-outline',
-  cena: 'restaurant-outline',
-  merienda: 'pizza-outline',
-  super: 'cart-outline',
-  compra: 'basket-outline',
-  fruta: 'nutrition-outline',
-  pan: 'nutrition-outline',
-  pizza: 'pizza-outline',
-  hamburguesa: 'fast-food-outline',
-  sushi: 'fish-outline',
-  carne: 'nutrition-outline',
-  pescado: 'fish-outline',
-
-  // CASA Y SUMINISTROS
-  alquiler: 'home-outline',
-  casa: 'home-outline',
-  piso: 'home-outline',
-  hipoteca: 'business-outline',
-  comunidad: 'people-outline',
-  seguro: 'shield-checkmark-outline',
-  luz: 'flash-outline',
-  electricidad: 'flash-outline',
-  agua: 'water-outline',
-  gas: 'flame-outline',
-  internet: 'wifi-outline',
-  fibra: 'cellular-outline',
-  telefono: 'call-outline',
-  movil: 'phone-portrait-outline',
-  mueble: 'bed-outline',
-  decoracion: 'brush-outline',
-  ikea: 'hammer-outline',
-  leroy: 'construct-outline',
-  limpieza: 'shiny-outline',
-  lavanderia: 'shirt-outline',
-  reformas: 'construct-outline',
-
-  // TRANSPORTE Y VEHÍCULOS
-  coche: 'car-outline',
-  moto: 'bicycle-outline',
-  bicicleta: 'bicycle-outline',
-  bici: 'bicycle-outline',
-  gasolina: 'funnel-outline',
-  diesel: 'funnel-outline',
-  reparacion: 'build-outline',
-  mecanico: 'construct-outline',
-  itv: 'list-circle-outline',
-  neumatico: 'disc-outline',
-  parking: 'car-sport-outline',
-  peaje: 'barcode-outline',
-  transporte: 'bus-outline',
-  bus: 'bus-outline',
-  tren: 'train-outline',
-  ave: 'train-outline',
-  metro: 'subway-outline',
-  taxi: 'car-outline',
-  uber: 'car-outline',
-  cabify: 'car-outline',
-  vuelo: 'airplane-outline',
-  avion: 'airplane-outline',
-
-  // SALUD Y BELLEZA
-  salud: 'medkit-outline',
-  medico: 'medical-outline',
-  dentista: 'medical-outline',
-  farmacia: 'bandage-outline',
-  psicologo: 'chatbubble-ellipses-outline',
-  optica: 'eye-outline',
-  gafas: 'eye-outline',
-  peluqueria: 'cut-outline',
-  barberia: 'cut-outline',
-  estetica: 'sparkles-outline',
-  crema: 'color-palette-outline',
-  gimnasio: 'fitness-outline',
-  gym: 'fitness-outline',
-  fitness: 'fitness-outline',
-  bienestar: 'leaf-outline',
-
-  // DEPORTE
-  deporte: 'football-outline',
-  futbol: 'football-outline',
-  padel: 'tennisball-outline',
-  tenis: 'tennisball-outline',
-  yoga: 'body-outline',
-  piscina: 'water-outline',
-  ski: 'snow-outline',
-  nieve: 'snow-outline',
-  senderismo: 'trail-sign-outline',
-  barbell: 'barbell-outline',
-  pesas: 'barbell-outline',
-
-  // OCIO Y CULTURA
-  ocio: 'game-controller-outline',
-  juego: 'game-controller-outline',
-  playstation: 'logo-playstation',
-  xbox: 'logo-xbox',
-  nintendo: 'game-controller-outline',
-  cine: 'film-outline',
-  netflix: 'play-circle-outline',
-  hbo: 'tv-outline',
-  yt: 'logo-youtube',
-  youtube: 'logo-youtube',
-  disney: 'tv-outline',
-  amazon: 'package-outline',
-  musica: 'musical-notes-outline',
-  concierto: 'musical-notes-outline',
-  spotify: 'musical-note-outline',
-  teatro: 'megaphone-outline',
-  libros: 'book-outline',
-  lectura: 'book-outline',
-  revista: 'newspaper-outline',
-  fiesta: 'sparkles-outline',
-  evento: 'calendar-outline',
-
-  // COMPRAS Y ESTILO
-  ropa: 'shirt-outline',
-  calzado: 'footsteps-outline',
-  zapatos: 'footsteps-outline',
-  accesorio: 'watch-outline',
-  joya: 'diamond-outline',
-  regalo: 'gift-outline',
-  cumpleaños: 'balloon-outline',
-  aniversario: 'heart-outline',
-  tecnologia: 'desktop-outline',
-  ordenador: 'desktop-outline',
-  pc: 'desktop-outline',
-  laptop: 'laptop-outline',
-  tablet: 'tablet-portrait-outline',
-  gadget: 'hardware-chip-outline',
-
-  // VIAJES
-  viaje: 'airplane-outline',
-  escapada: 'map-outline',
-  hotel: 'bed-outline',
-  apartamento: 'home-outline',
-  airbnb: 'home-outline',
-  destino: 'location-outline',
-  mapa: 'map-outline',
-  maleta: 'briefcase-outline',
-
-  // EDUCACIÓN Y TRABAJO
-  curso: 'school-outline',
-  formacion: 'library-outline',
-  universidad: 'school-outline',
-  colegio: 'school-outline',
-  academia: 'library-outline',
-  material: 'pencil-outline',
-  papeleria: 'paper-plane-outline',
-  oficina: 'business-outline',
-  freelance: 'laptop-outline',
-
-  // MASCOTAS Y OTROS
-  perro: 'paw-outline',
-  gato: 'paw-outline',
-  mascota: 'paw-outline',
-  veterinario: 'medkit-outline',
-  donacion: 'heart-half-outline',
-  ong: 'heart-circle-outline',
-  tabaco: 'nuclear-outline',
-  estanco: 'nuclear-outline',
-  loteria: 'ticket-outline',
-  multa: 'alert-circle-outline',
-  imprevisto: 'help-circle-outline',
+  nomina:'cash-outline', sueldo:'cash-outline', paga:'cash-outline',
+  bizum:'send-outline', transferencia:'swap-horizontal-outline',
+  ahorro:'wallet-outline', inversion:'trending-up-outline',
+  acciones:'stats-chart-outline', prestamo:'wallet-outline',
+  hacienda:'document-text-outline', devolucion:'refresh-outline',
+  venta:'pricetag-outline', extra:'gift-outline',
+  comida:'fast-food-outline', restaurante:'restaurant-outline',
+  bar:'beer-outline', cafe:'cafe-outline', copa:'wine-outline',
+  cena:'restaurant-outline', super:'cart-outline', compra:'basket-outline',
+  pizza:'pizza-outline', hamburguesa:'fast-food-outline', sushi:'fish-outline',
+  alquiler:'home-outline', casa:'home-outline', piso:'home-outline',
+  hipoteca:'business-outline', seguro:'shield-checkmark-outline',
+  luz:'flash-outline', electricidad:'flash-outline', agua:'water-outline',
+  gas:'flame-outline', internet:'wifi-outline', movil:'phone-portrait-outline',
+  coche:'car-outline', moto:'bicycle-outline', bicicleta:'bicycle-outline',
+  gasolina:'funnel-outline', reparacion:'build-outline', parking:'car-sport-outline',
+  bus:'bus-outline', tren:'train-outline', metro:'subway-outline',
+  vuelo:'airplane-outline', avion:'airplane-outline',
+  salud:'medkit-outline', medico:'medical-outline', farmacia:'bandage-outline',
+  psicologo:'chatbubble-ellipses-outline', peluqueria:'cut-outline',
+  gimnasio:'fitness-outline', gym:'fitness-outline',
+  deporte:'football-outline', futbol:'football-outline',
+  padel:'tennisball-outline', tenis:'tennisball-outline',
+  cine:'film-outline', netflix:'play-circle-outline',
+  spotify:'musical-note-outline', fiesta:'sparkles-outline',
+  ropa:'shirt-outline', calzado:'footsteps-outline', regalo:'gift-outline',
+  tecnologia:'desktop-outline', ordenador:'desktop-outline',
+  viaje:'airplane-outline', hotel:'bed-outline',
+  curso:'school-outline', universidad:'school-outline',
+  perro:'paw-outline', gato:'paw-outline', mascota:'paw-outline',
 };
 
 const getSmartIcon = (name, type) => {
-  const lowerName = name.toLowerCase();
+  const lower = name.toLowerCase();
   for (const key in ICON_MAP) {
-    if (lowerName.includes(key)) return ICON_MAP[key];
+    if (lower.includes(key)) return ICON_MAP[key];
   }
   return type === 'income' ? 'cash-outline' : 'cart-outline';
 };
 
-export default function ProfileScreen({ 
-  userName, 
-  setUserName, 
-  setTransactions, 
-  categories, 
-  setCategories, 
-  incomeCategories, 
-  setIncomeCategories,
-  onFullReset 
+const COLORS = ['#8B5CF6','#EC4899','#F43F5E','#10B981','#3B82F6','#F59E0B','#64748B','#06B6D4','#84CC16','#F97316'];
+
+export default function ProfileScreen({
+  userName, setUserName, setTransactions,
+  categories, setCategories,
+  incomeCategories, setIncomeCategories,
+  onFullReset,
 }) {
   const [tempName, setTempName] = useState(userName || '');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -215,35 +63,77 @@ export default function ProfileScreen({
   const [newCatColor, setNewCatColor] = useState(THEME.colors.accent);
   const [newCatType, setNewCatType] = useState('expense');
 
-  const COLORS = ['#8B5CF6', '#EC4899', '#F43F5E', '#10B981', '#3B82F6', '#F59E0B', '#64748B'];
-
   const handleUpdate = () => {
-    if (!tempName.trim()) {
-      Alert.alert("Error", "El nombre no puede estar vacío");
-      return;
-    }
+    if (!tempName.trim()) { Alert.alert('Error', 'El nombre no puede estar vacío'); return; }
     setUserName(tempName.trim());
-    Alert.alert("Éxito", "Nombre actualizado correctamente");
+    Alert.alert('✅ Actualizado', 'Nombre guardado correctamente');
   };
 
+  const closeAddModal = () => {
+    setIsAddModalVisible(false);
+    setNewCatName('');
+    setNewCatColor(THEME.colors.accent);
+    setNewCatType('expense');
+  };
 
+  const handleAddCategory = () => {
+    if (!newCatName.trim()) return;
+    const cat = { id: newCatName.trim(), color: newCatColor, icon: getSmartIcon(newCatName, newCatType) };
+    if (newCatType === 'income') setIncomeCategories(prev => [...prev, cat]);
+    else setCategories(prev => [...prev, cat]);
+    closeAddModal();
+  };
+
+  const totalCats = (categories?.length || 0) + (incomeCategories?.length || 0);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mi Perfil</Text>
+        <Text style={styles.headerSub}>Gestiona tu cuenta y preferencias</Text>
+      </View>
+
+      {/* Avatar hero */}
+      <View style={styles.heroCard}>
+        <View style={styles.avatarRing}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarEmoji}>
+              {userName?.charAt(0)?.toUpperCase() || '?'}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.heroName}>{userName || 'Usuario'}</Text>
+        <Text style={styles.heroSub}>Usuario de VibeCash</Text>
+
+        {/* Mini stats */}
+        <View style={styles.heroStats}>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatVal}>{totalCats}</Text>
+            <Text style={styles.heroStatLabel}>Categorías</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStat}>
+            <Text style={[styles.heroStatVal, { color: THEME.colors.accent }]}>VibeCash</Text>
+            <Text style={styles.heroStatLabel}>v1.5.0</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStat}>
+            <Ionicons name="shield-checkmark" size={16} color={THEME.colors.success} />
+            <Text style={styles.heroStatLabel}>Privado</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={50} color={THEME.colors.accent} />
-          </View>
-          <Text style={styles.currentName}>{userName}</Text>
-        </View>
 
-        <View style={styles.formCard}>
-          <Text style={styles.label}>Nombre de Usuario</Text>
+        {/* ── Nombre ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="person-outline" size={18} color={THEME.colors.accent} />
+            <Text style={styles.sectionTitle}>Nombre de usuario</Text>
+          </View>
           <TextInput
             style={styles.input}
             value={tempName}
@@ -251,182 +141,211 @@ export default function ProfileScreen({
             placeholder="Escribe tu nombre..."
             placeholderTextColor={THEME.colors.textSecondary}
           />
-
-          <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
-            <Text style={styles.saveBtnText}>Actualizar Perfil</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleUpdate}>
+            <Ionicons name="checkmark-circle-outline" size={18} color="#FFF" />
+            <Text style={styles.primaryBtnText}>Guardar nombre</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.formCard}>
-          <Text style={styles.label}>Gestión de Datos</Text>
-          <Text style={styles.subLabel}>Opciones para limpiar tu información</Text>
-          
-          <TouchableOpacity 
-            style={[styles.resetBtn, { marginBottom: 15 }]} 
-            onPress={() => {
-              const performReset = () => setTransactions([]);
-              if (Platform.OS === 'web') {
-                if (window.confirm("¿Seguro que quieres borrar todos los gastos e ingresos? Mantendrás tu nombre y categorías.")) {
-                  performReset();
-                }
-              } else {
-                Alert.alert(
-                  "Borrar Movimientos",
-                  "¿Seguro que quieres borrar todos los gastos e ingresos? Mantendrás tu nombre y categorías.",
-                  [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "Sí, Borrar", style: "destructive", onPress: performReset }
-                  ]
-                );
-              }
-            }}
-          >
-            <Ionicons name="list-outline" size={20} color={THEME.colors.textPrimary} />
-            <Text style={styles.resetBtnText}>Borrar solo movimientos</Text>
-          </TouchableOpacity>
+        {/* ── Categorías ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="grid-outline" size={18} color={THEME.colors.accent} />
+            <Text style={styles.sectionTitle}>Categorías</Text>
+          </View>
+          <Text style={styles.sectionSub}>Toca la ✕ para eliminar una categoría</Text>
 
-          <TouchableOpacity 
-            style={[styles.resetBtn, { borderColor: THEME.colors.error }]} 
-            onPress={() => {
-              if (Platform.OS === 'web') {
-                if (window.confirm("REINICIO TOTAL: Se borrará TODO (nombre, categorías y gastos). ¿Estás seguro?")) {
-                  onFullReset();
-                }
-              } else {
-                Alert.alert(
-                  "REINICIO TOTAL",
-                  "Se borrará TODO: nombre, categorías y gastos. Volverás a la pantalla de bienvenida. ¿Estás seguro?",
-                  [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "REINICIAR TODO", style: "destructive", onPress: onFullReset }
-                  ]
-                );
-              }
-            }}
-          >
-            <Ionicons name="refresh-circle-outline" size={20} color={THEME.colors.error} />
-            <Text style={[styles.resetBtnText, { color: THEME.colors.error }]}>Reiniciar aplicación completa</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formCard}>
-          <Text style={styles.label}>Gestión de Categorías</Text>
-          <Text style={styles.subLabel}>Toca una categoría para verla o añade nuevas</Text>
-          
-          <Text style={styles.groupTitle}>Gastos</Text>
-          <View style={styles.categoriesGrid}>
+          <Text style={styles.groupLabel}>💸 Gastos</Text>
+          <View style={styles.catGrid}>
             {(categories || []).map(cat => (
-              <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Ionicons name={cat.icon || 'cart-outline'} size={18} color={cat.color} />
-                <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
-                <TouchableOpacity onPress={() => {
-                  setCategories(prev => prev.filter(c => c.id !== cat.id));
-                }}>
-                  <Ionicons name="close-circle" size={18} color={THEME.colors.error} style={{marginLeft: 5}} />
+              <View key={cat.id} style={[styles.catCard, { borderColor: cat.color + '60' }]}>
+                <View style={[styles.catCardIcon, { backgroundColor: cat.color + '20' }]}>
+                  <Ionicons name={cat.icon || 'cart-outline'} size={16} color={cat.color} />
+                </View>
+                <Text style={[styles.catCardName, { color: cat.color }]}>{cat.id}</Text>
+                <TouchableOpacity
+                  onPress={() => setCategories(prev => prev.filter(c => c.id !== cat.id))}
+                  style={styles.catRemoveBtn}
+                >
+                  <Ionicons name="close-circle" size={16} color={THEME.colors.error} />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
 
-          <Text style={[styles.groupTitle, {marginTop: 15}]}>Ingresos</Text>
-          <View style={styles.categoriesGrid}>
+          <Text style={[styles.groupLabel, { marginTop: 16 }]}>📈 Ingresos</Text>
+          <View style={styles.catGrid}>
             {(incomeCategories || []).map(cat => (
-              <View key={cat.id} style={[styles.catChip, { borderColor: cat.color }]}>
-                <Ionicons name={cat.icon || 'cash-outline'} size={18} color={cat.color} />
-                <Text style={[styles.catChipText, { color: cat.color }]}>{cat.id}</Text>
-                <TouchableOpacity onPress={() => {
-                  setIncomeCategories(prev => prev.filter(c => c.id !== cat.id));
-                }}>
-                  <Ionicons name="close-circle" size={18} color={THEME.colors.error} style={{marginLeft: 5}} />
+              <View key={cat.id} style={[styles.catCard, { borderColor: cat.color + '60' }]}>
+                <View style={[styles.catCardIcon, { backgroundColor: cat.color + '20' }]}>
+                  <Ionicons name={cat.icon || 'cash-outline'} size={16} color={cat.color} />
+                </View>
+                <Text style={[styles.catCardName, { color: cat.color }]}>{cat.id}</Text>
+                <TouchableOpacity
+                  onPress={() => setIncomeCategories(prev => prev.filter(c => c.id !== cat.id))}
+                  style={styles.catRemoveBtn}
+                >
+                  <Ionicons name="close-circle" size={16} color={THEME.colors.error} />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
 
-          <TouchableOpacity 
-            style={[styles.saveBtn, { marginTop: 20, backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.colors.accent }]} 
-            onPress={() => setIsAddModalVisible(true)}
-          >
-            <Text style={[styles.saveBtnText, { color: THEME.colors.accent }]}>+ Nueva Categoría</Text>
+          <TouchableOpacity style={styles.outlineBtn} onPress={() => setIsAddModalVisible(true)}>
+            <Ionicons name="add-circle-outline" size={18} color={THEME.colors.accent} />
+            <Text style={styles.outlineBtnText}>Nueva categoría</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Modal de Nueva Categoría */}
-        <Modal visible={isAddModalVisible} animationType="slide" transparent={true}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Nueva Categoría</Text>
-              
-              <View style={styles.typeRow}>
-                <TouchableOpacity 
-                  style={[styles.typeBtn, newCatType === 'expense' && {backgroundColor: THEME.colors.accent}]}
-                  onPress={() => setNewCatType('expense')}
-                >
-                  <Text style={{color: '#FFF', fontWeight: 'bold'}}>Gasto</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.typeBtn, newCatType === 'income' && {backgroundColor: THEME.colors.success}]}
-                  onPress={() => setNewCatType('income')}
-                >
-                  <Text style={{color: '#FFF', fontWeight: 'bold'}}>Ingreso</Text>
-                </TouchableOpacity>
-              </View>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Nombre (ej: Gimnasio)"
-                placeholderTextColor={THEME.colors.textSecondary}
-                value={newCatName}
-                onChangeText={setNewCatName}
-              />
-
-              <Text style={styles.label}>Color</Text>
-              <View style={styles.categoriesGrid}>
-                {COLORS.map(c => (
-                  <TouchableOpacity 
-                    key={c} 
-                    style={[styles.colorCircle, {backgroundColor: c}, newCatColor === c && {borderWidth: 3, borderColor: '#FFF'}]}
-                    onPress={() => setNewCatColor(c)}
-                  />
-                ))}
-              </View>
-
-              <View style={{flexDirection: 'row', gap: 10, marginTop: 30}}>
-                <TouchableOpacity 
-                  style={[styles.saveBtn, {flex: 1, backgroundColor: '#334155'}]}
-                  onPress={() => setIsAddModalVisible(false)}
-                >
-                  <Text style={styles.saveBtnText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.saveBtn, {flex: 1}]}
-                  onPress={() => {
-                    if (!newCatName) return;
-                    const cat = { 
-                      id: newCatName, 
-                      color: newCatColor, 
-                      icon: getSmartIcon(newCatName, newCatType)
-                    };
-                    if (newCatType === 'income') setIncomeCategories([...incomeCategories, cat]);
-                    else setCategories([...categories, cat]);
-                    setIsAddModalVisible(false);
-                    setNewCatName('');
-                  }}
-                >
-                  <Text style={styles.saveBtnText}>Guardar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        {/* ── Datos ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="shield-outline" size={18} color={THEME.colors.accent} />
+            <Text style={styles.sectionTitle}>Gestión de datos</Text>
           </View>
-        </Modal>
+          <Text style={styles.sectionSub}>Los datos se guardan sólo en este dispositivo</Text>
 
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Sobre VibeCash</Text>
-          <Text style={[styles.infoText, { fontWeight: '700', color: THEME.colors.accent, marginBottom: 10 }]}>Hecho por Javier Lacarra Rubio</Text>
-          <Text style={styles.infoText}>Versión 1.4.0</Text>
-          <Text style={styles.infoText}>Tus datos y categorías se guardan localmente para tu privacidad.</Text>
+          <TouchableOpacity
+            style={styles.dangerRowSoft}
+            onPress={() => {
+              const run = () => setTransactions([]);
+              if (Platform.OS === 'web') {
+                if (window.confirm('¿Borrar todos los movimientos? Se conservarán nombre y categorías.')) run();
+              } else {
+                Alert.alert('Borrar Movimientos', '¿Seguro? Se conservarán nombre y categorías.',
+                  [{ text: 'Cancelar', style: 'cancel' }, { text: 'Borrar', style: 'destructive', onPress: run }]);
+              }
+            }}
+          >
+            <View style={[styles.dangerRowIcon, { backgroundColor: THEME.colors.warning + '20' }]}>
+              <Ionicons name="trash-outline" size={18} color={THEME.colors.warning} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dangerRowTitle}>Borrar movimientos</Text>
+              <Text style={styles.dangerRowSub}>Mantiene nombre y categorías</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.dangerRowHard}
+            onPress={() => {
+              if (Platform.OS === 'web') {
+                if (window.confirm('REINICIO TOTAL: se borrará absolutamente todo. ¿Seguro?')) onFullReset();
+              } else {
+                Alert.alert('REINICIO TOTAL', 'Se borrará TODO: nombre, categorías y movimientos.',
+                  [{ text: 'Cancelar', style: 'cancel' }, { text: 'REINICIAR', style: 'destructive', onPress: onFullReset }]);
+              }
+            }}
+          >
+            <View style={[styles.dangerRowIcon, { backgroundColor: THEME.colors.error + '20' }]}>
+              <Ionicons name="refresh-circle-outline" size={18} color={THEME.colors.error} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.dangerRowTitle, { color: THEME.colors.error }]}>Reinicio completo</Text>
+              <Text style={styles.dangerRowSub}>Borra todo, vuelve al onboarding</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.error} />
+          </TouchableOpacity>
         </View>
+
+        {/* ── Sobre la app ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="information-circle-outline" size={18} color={THEME.colors.accent} />
+            <Text style={styles.sectionTitle}>Sobre VibeCash</Text>
+          </View>
+          {[
+            { icon: 'code-slash-outline', label: 'Desarrollado por', value: 'Javier Lacarra Rubio' },
+            { icon: 'layers-outline', label: 'Versión', value: '1.5.0' },
+            { icon: 'shield-checkmark-outline', label: 'Privacidad', value: 'Datos 100% locales' },
+            { icon: 'phone-portrait-outline', label: 'Plataforma', value: Platform.OS === 'web' ? 'Web App' : 'Móvil (Expo)' },
+          ].map(row => (
+            <View key={row.label} style={styles.infoRow}>
+              <Ionicons name={row.icon} size={16} color={THEME.colors.textSecondary} />
+              <Text style={styles.infoLabel}>{row.label}</Text>
+              <Text style={styles.infoValue}>{row.value}</Text>
+            </View>
+          ))}
+        </View>
+
       </View>
+
+      {/* ── Modal Nueva Categoría (bottom sheet) ── */}
+      <Modal visible={isAddModalVisible} animationType="slide" transparent onRequestClose={closeAddModal}>
+        {/* Overlay — tap to close */}
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeAddModal}>
+          {/* Sheet — tap inside doesn't close */}
+          <TouchableOpacity activeOpacity={1} style={styles.modalSheet} onPress={() => {}}>
+            {/* Handle */}
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Nueva Categoría</Text>
+
+            {/* Tipo */}
+            <View style={styles.typeRow}>
+              {[{ key: 'expense', label: '💸 Gasto' }, { key: 'income', label: '📈 Ingreso' }].map(t => (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.typeBtn, newCatType === t.key && styles.typeBtnActive]}
+                  onPress={() => setNewCatType(t.key)}
+                >
+                  <Text style={[styles.typeBtnText, newCatType === t.key && styles.typeBtnTextActive]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Nombre */}
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Nombre (ej: Gimnasio)"
+              placeholderTextColor={THEME.colors.textSecondary}
+              value={newCatName}
+              onChangeText={setNewCatName}
+              autoFocus
+            />
+
+            {/* Color */}
+            <Text style={styles.modalLabel}>Color</Text>
+            <View style={styles.colorRow}>
+              {COLORS.map(c => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.colorCircle, { backgroundColor: c }, newCatColor === c && styles.colorCircleActive]}
+                  onPress={() => setNewCatColor(c)}
+                >
+                  {newCatColor === c && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Preview */}
+            {newCatName.trim() !== '' && (
+              <View style={styles.previewRow}>
+                <View style={[styles.previewIcon, { backgroundColor: newCatColor + '25' }]}>
+                  <Ionicons name={getSmartIcon(newCatName, newCatType)} size={18} color={newCatColor} />
+                </View>
+                <Text style={[styles.previewText, { color: newCatColor }]}>{newCatName}</Text>
+              </View>
+            )}
+
+            {/* Botones */}
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={closeAddModal}>
+                <Text style={styles.modalBtnCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: newCatName.trim() ? THEME.colors.accent : THEME.colors.border }]}
+                onPress={handleAddCategory}
+                disabled={!newCatName.trim()}
+              >
+                <Text style={styles.modalBtnText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -435,176 +354,394 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.colors.background,
-    paddingTop: 60,
   },
   header: {
-    paddingHorizontal: 25,
-    marginBottom: 30,
+    paddingTop: TOP,
+    paddingHorizontal: 22,
+    paddingBottom: 4,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
-    color: THEME.colors.textPrimary,
+    color: '#FFF',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
+  headerSub: {
+    fontSize: 13,
+    color: THEME.colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
   },
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  avatarCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  // Hero
+  heroCard: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
     backgroundColor: THEME.colors.surface,
-    justifyContent: 'center',
+    borderRadius: 28,
+    padding: 28,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: THEME.colors.accent,
-    marginBottom: 15,
-  },
-  currentName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: THEME.colors.textPrimary,
-  },
-  formCard: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 30,
-    padding: 25,
     borderWidth: 1,
     borderColor: THEME.colors.border,
+  },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: THEME.colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+    padding: 3,
+  },
+  avatarCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: THEME.colors.accent + '25',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarEmoji: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: THEME.colors.accent,
+  },
+  heroName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  heroSub: {
+    fontSize: 13,
+    color: THEME.colors.textSecondary,
     marginBottom: 20,
   },
-  label: {
+  heroStats: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: THEME.colors.border,
+    paddingTop: 16,
+    width: '100%',
+    justifyContent: 'space-around',
+  },
+  heroStat: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  heroStatDivider: {
+    width: 1,
+    backgroundColor: THEME.colors.border,
+  },
+  heroStatVal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  heroStatLabel: {
+    fontSize: 10,
     color: THEME.colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 15,
-    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  // Content sections
+  content: {
+    paddingHorizontal: 20,
+  },
+  section: {
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  sectionSub: {
+    fontSize: 12,
+    color: THEME.colors.textSecondary,
+    marginBottom: 16,
+    marginTop: -8,
   },
   input: {
     backgroundColor: THEME.colors.background,
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 14,
+    padding: 14,
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    marginBottom: 20,
+    marginBottom: 14,
   },
-  saveBtn: {
+  primaryBtn: {
     backgroundColor: THEME.colors.accent,
-    paddingVertical: 15,
-    borderRadius: 15,
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
-  saveBtnText: {
+  primaryBtnText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
   },
-  infoCard: {
-    padding: 20,
+  outlineBtn: {
+    borderWidth: 1.5,
+    borderColor: THEME.colors.accent,
+    borderRadius: 14,
+    paddingVertical: 13,
     alignItems: 'center',
+    marginTop: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
-  infoTitle: {
-    color: THEME.colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: 5,
-  },
-  infoText: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  subLabel: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
-    marginBottom: 20,
-    marginTop: -10,
-  },
-  groupTitle: {
-    color: THEME.colors.textPrimary,
+  outlineBtnText: {
+    color: THEME.colors.accent,
     fontSize: 14,
     fontWeight: '800',
-    marginBottom: 10,
-    textTransform: 'uppercase',
   },
-  categoriesGrid: {
+  // Category grid
+  groupLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  catGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
-  catChip: {
+  catCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    gap: 6,
   },
-  catChipText: {
+  catCardIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  catCardName: {
     fontSize: 13,
     fontWeight: '700',
-    marginHorizontal: 8,
+    maxWidth: 80,
   },
-  resetBtn: {
+  catRemoveBtn: {
+    padding: 2,
+  },
+  // Danger rows
+  dangerRowSoft: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    borderRadius: 15,
     backgroundColor: THEME.colors.background,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: THEME.colors.border,
   },
-  resetBtnText: {
-    color: THEME.colors.textPrimary,
+  dangerRowHard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.colors.error + '08',
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: THEME.colors.error + '40',
+  },
+  dangerRowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dangerRowTitle: {
     fontSize: 14,
     fontWeight: '700',
-    marginLeft: 10,
+    color: '#FFF',
+    marginBottom: 2,
   },
-  colorCircle: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
+  dangerRowSub: {
+    fontSize: 11,
+    color: THEME.colors.textSecondary,
   },
-  modalContent: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 30,
-    padding: 25,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  // Info rows
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
+  infoLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: THEME.colors.textSecondary,
+    fontWeight: '600',
+  },
+  infoValue: {
+    fontSize: 13,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  // Modal bottom sheet
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
   },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  typeBtn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 15,
-    alignItems: 'center',
-    backgroundColor: THEME.colors.background,
-    borderWidth: 1,
+  modalSheet: {
+    backgroundColor: THEME.colors.surface,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: 40,
+    borderTopWidth: 1,
     borderColor: THEME.colors.border,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: THEME.colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '900',
     color: '#FFF',
-    marginBottom: 25,
+    marginBottom: 20,
     textAlign: 'center',
-  }
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  typeBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  typeBtnActive: {
+    backgroundColor: THEME.colors.accent + '20',
+    borderColor: THEME.colors.accent,
+  },
+  typeBtnText: {
+    color: THEME.colors.textSecondary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  typeBtnTextActive: {
+    color: THEME.colors.accent,
+    fontWeight: '800',
+  },
+  modalInput: {
+    backgroundColor: THEME.colors.background,
+    borderRadius: 14,
+    padding: 14,
+    color: '#FFF',
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  colorCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorCircleActive: {
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: THEME.colors.background,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 4,
+  },
+  previewIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewText: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  modalBtnCancelText: {
+    color: THEME.colors.textSecondary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  modalBtnText: {
+    color: '#FFF',
+    fontWeight: '800',
+    fontSize: 14,
+  },
 });

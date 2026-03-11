@@ -73,7 +73,11 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={styles.modalOverlay}
       >
+        {/* Tap outside to close */}
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
         <View style={styles.modalContent}>
+          {/* Drag handle */}
+          <View style={styles.handle} />
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Nuevo Registro</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -233,7 +237,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     padding: 25,
+    paddingTop: 12,
     maxHeight: '90%',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: THEME.colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',
