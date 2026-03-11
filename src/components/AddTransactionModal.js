@@ -38,12 +38,17 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       return;
     }
 
+    const totalAmount = parseFloat(normalizedAmount);
+    const myPartValue = (type === 'expense' && isShared) ? parseFloat(myPart.replace(',', '.') || normalizedAmount) : totalAmount;
+    const refund = (type === 'expense' && isShared) ? Math.max(0, totalAmount - myPartValue) : 0;
+
     const newTx = {
       id: initialData ? initialData.id : Date.now().toString(),
       description,
-      amount: parseFloat(normalizedAmount),
+      amount: totalAmount,
       isShared: type === 'expense' ? isShared : false,
-      myPart: (type === 'expense' && isShared) ? parseFloat(myPart.replace(',', '.') || normalizedAmount) : parseFloat(normalizedAmount),
+      myPart: myPartValue,
+      refundAmount: refund,
       type,
       category,
       date: date.toISOString(),
@@ -81,13 +86,13 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             <View style={styles.typeRow}>
               <TouchableOpacity 
                 style={[styles.typeBtn, type === 'income' && styles.typeBtnActiveIncome]}
-                onPress={() => { setType('income'); setCategory('Nómina'); }}
+                onPress={() => { setType('income'); setCategory(incomeCategories[0]?.id || ''); }}
               >
                 <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>Ingreso</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.typeBtn, type === 'expense' && styles.typeBtnActiveExpense]}
-                onPress={() => { setType('expense'); setCategory('Comida'); }}
+                onPress={() => { setType('expense'); setCategory(categories[0]?.id || ''); }}
               >
                 <Text style={[styles.typeBtnText, type === 'expense' && styles.typeBtnTextActive]}>Gasto</Text>
               </TouchableOpacity>

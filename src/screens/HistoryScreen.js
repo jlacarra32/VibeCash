@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
+import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
 
 export default function HistoryScreen({ transactions, categories, incomeCategories, onEdit, onDelete, onBack }) {
   const [search, setSearch] = useState('');
@@ -21,17 +22,7 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
   // Remove duplicates if any (by id)
   const uniqueCats = Array.from(new Map(allCats.map(item => [item.id, item])).values());
 
-  const getCategoryIcon = (catId, type) => {
-    const list = (type === 'income' ? incomeCategories : categories) || [];
-    const cat = list.find(c => c.id === catId);
-    return cat ? cat.icon : (type === 'income' ? 'cash-outline' : 'cart-outline');
-  };
 
-  const getCategoryColor = (catId, type) => {
-    const list = (type === 'income' ? incomeCategories : categories) || [];
-    const cat = list.find(c => c.id === catId);
-    return cat ? cat.color : THEME.colors.textSecondary;
-  };
 
   return (
     <View style={styles.container}>
@@ -107,8 +98,8 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
       <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {filteredTransactions.map(tx => (
           <View key={tx.id} style={styles.transactionCard}>
-            <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
-              <Ionicons name={getCategoryIcon(tx.category, tx.type)} size={22} color={getCategoryColor(tx.category, tx.type)} />
+            <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type, categories, incomeCategories) + '15' }]}>
+              <Ionicons name={getCategoryIcon(tx.category, tx.type, categories, incomeCategories)} size={22} color={getCategoryColor(tx.category, tx.type, categories, incomeCategories)} />
             </View>
             
             <View style={styles.txInfo}>

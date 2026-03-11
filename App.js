@@ -144,7 +144,22 @@ export default function App() {
   };
 
   const handleDeleteTransaction = (id) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    const performDelete = () => setTransactions(prev => prev.filter(t => t.id !== id));
+
+    if (Platform.OS === 'web') {
+      if (window.confirm("¿Estás seguro de que quieres eliminar este registro?")) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        "Borrar Movimiento",
+        "¿Estás seguro de que quieres eliminar este registro?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Borrar", style: "destructive", onPress: performDelete }
+        ]
+      );
+    }
   };
 
   return (

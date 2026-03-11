@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView }
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
+import { getCategoryColor, getCategoryIcon } from '../logic/helpers';
 
 LocaleConfig.locales['es'] = {
   monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
@@ -44,7 +45,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
   }, [transactions, selectedDate]);
 
   const dailyTransactions = useMemo(() => {
-    return transactions.filter(t => t.date.split('T')[0] === selectedDate);
+    return transactions.filter(t => t.date && t.date.split('T')[0] === selectedDate);
   }, [transactions, selectedDate]);
 
   return (
@@ -310,14 +311,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const getCategoryColor = (catId, type, categories, incomeCategories) => {
-  const list = (type === 'income' ? incomeCategories : categories) || [];
-  const cat = list.find(c => c.id === catId);
-  return cat ? cat.color : THEME.colors.textSecondary;
-};
-
-const getCategoryIcon = (catId, type, categories, incomeCategories) => {
-  const list = (type === 'income' ? incomeCategories : categories) || [];
-  const cat = list.find(c => c.id === catId);
-  return cat ? cat.icon : (type === 'income' ? 'cash-outline' : 'cart-outline');
-};

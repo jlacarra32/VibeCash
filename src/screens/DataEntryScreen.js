@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Animated, ScrollView, Platform, Alert } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
+import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
 
 export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories, onGoToHistory }) {
   const [timeFilter, setTimeFilter] = useState('month');
@@ -48,17 +48,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
     }
   };
 
-  const getCategoryIcon = (catId, type) => {
-    const list = (type === 'income' ? incomeCategories : categories) || [];
-    const cat = list.find(c => c.id === catId);
-    return cat ? cat.icon : (type === 'income' ? 'cash-outline' : 'cart-outline');
-  };
 
-  const getCategoryColor = (catId, type) => {
-    const list = (type === 'income' ? incomeCategories : categories) || [];
-    const cat = list.find(c => c.id === catId);
-    return cat ? cat.color : THEME.colors.textSecondary;
-  };
 
   return (
     <View style={styles.container}>
@@ -125,10 +115,10 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
               <Text style={styles.verTodoLink}>Ver Todo</Text>
             </TouchableOpacity>
           </View>
-          {(transactions || []).slice().reverse().map(tx => (
+          {(cashFlow.transactions || []).slice().reverse().slice(0, 15).map(tx => (
             <View key={tx.id} style={styles.transactionCard}>
-              <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
-                <Ionicons name={getCategoryIcon(tx.category, tx.type)} size={22} color={getCategoryColor(tx.category, tx.type)} />
+              <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type, categories, incomeCategories) + '15' }]}>
+                <Ionicons name={getCategoryIcon(tx.category, tx.type, categories, incomeCategories)} size={22} color={getCategoryColor(tx.category, tx.type, categories, incomeCategories)} />
               </View>
               
               <View style={styles.txInfo}>

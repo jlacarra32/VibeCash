@@ -44,7 +44,7 @@ export default function ChartsScreen({ transactions, categories }) {
           <Text style={styles.headerTitle}>Análisis</Text>
           <Text style={styles.headerSub}>Balance {isReal ? 'Neto' : 'Total'}</Text>
         </View>
-        <Text style={styles.headerBalance}>{cashFlow.netBalance.toFixed(2)}€</Text>
+        <Text style={[styles.headerBalance, { color: cashFlow.netBalance >= 0 ? THEME.colors.success : THEME.colors.error }]}>{cashFlow.netBalance.toFixed(2)}€</Text>
       </View>
 
       <View style={styles.tabBar}>
