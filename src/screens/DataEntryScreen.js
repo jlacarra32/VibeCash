@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 
-export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories }) {
+export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories, onGoToHistory }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const balanceAnim = useRef(new Animated.Value(1)).current;
 
@@ -69,9 +69,9 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
           <Text style={styles.signatureText}>por Javier Lacarra Rubio</Text>
           <Text style={styles.userName}>¡Hola, {userName || 'Usuario'}!</Text>
         </View>
-        <View style={styles.topIconBtn}>
-          <Ionicons name="leaf-outline" size={24} color={THEME.colors.accent} />
-        </View>
+        <TouchableOpacity style={styles.topIconBtn} onPress={onGoToHistory}>
+          <Ionicons name="search-outline" size={24} color={THEME.colors.accent} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
@@ -119,7 +119,12 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
 
         {/* Transactions list */}
         <View style={styles.historyList}>
-          <Text style={styles.sectionTitle}>Movimientos Recientes</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Movimientos Recientes</Text>
+            <TouchableOpacity onPress={onGoToHistory}>
+              <Text style={styles.verTodoLink}>Ver Todo</Text>
+            </TouchableOpacity>
+          </View>
           {(transactions || []).slice().reverse().map(tx => (
             <View key={tx.id} style={styles.transactionCard}>
               <View style={[styles.txIconContainer, { backgroundColor: getCategoryColor(tx.category, tx.type) + '15' }]}>
@@ -285,7 +290,17 @@ const styles = StyleSheet.create({
     color: THEME.colors.textPrimary,
     fontSize: 18,
     fontWeight: '800',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  verTodoLink: {
+    color: THEME.colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
   },
   transactionCard: {
     flexDirection: 'row',

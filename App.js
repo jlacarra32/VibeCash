@@ -8,6 +8,7 @@ import { THEME, CATEGORIES, INCOME_CATEGORIES } from './src/constants/theme';
 import DataEntryScreen from './src/screens/DataEntryScreen';
 import ChartsScreen from './src/screens/ChartsScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
+import HistoryScreen from './src/screens/HistoryScreen';
 
 // Memoria de emergencia por si el móvil bloquea el almacenamiento
 let backupStorage = null;
@@ -142,6 +143,10 @@ export default function App() {
     }
   };
 
+  const handleDeleteTransaction = (id) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'right', 'left', 'bottom']}>
@@ -157,11 +162,21 @@ export default function App() {
                 userName={userName}
                 categories={categories}
                 incomeCategories={incomeCategories}
+                onGoToHistory={() => setCurrentScreen('History')}
               /> 
             : currentScreen === 'Charts'
             ? <ChartsScreen transactions={transactions} categories={categories} />
             : currentScreen === 'Calendar'
             ? <CalendarScreen transactions={transactions} categories={categories} incomeCategories={incomeCategories} />
+            : currentScreen === 'History'
+            ? <HistoryScreen 
+                transactions={transactions} 
+                categories={categories} 
+                incomeCategories={incomeCategories} 
+                onEdit={openEditModal}
+                onDelete={handleDeleteTransaction}
+                onBack={() => setCurrentScreen('DataEntry')}
+              />
             : <ProfileScreen 
                 userName={userName} 
                 setUserName={setUserName} 
