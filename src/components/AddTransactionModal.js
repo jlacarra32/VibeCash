@@ -79,7 +79,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
           {/* Drag handle */}
           <View style={styles.handle} />
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Nuevo Registro</Text>
+            <Text style={styles.modalTitle}>{initialData ? 'Editar Registro' : 'Nuevo Registro'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={24} color={THEME.colors.textSecondary} />
             </TouchableOpacity>
@@ -151,28 +151,24 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                />
             )}
 
-            {/* Category selection - Only for expenses */}
-            {type === 'expense' && (
-              <>
-                <Text style={styles.label}>Categoría</Text>
-                <View style={styles.categoryGrid}>
-                  {(categories || []).map(cat => (
-                    <TouchableOpacity 
-                      key={cat.id} 
-                      style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
-                      onPress={() => setCategory(cat.id)}
-                    >
-                      <Ionicons 
-                        name={cat.icon || 'cart-outline'} 
-                        size={20} 
-                        color={category === cat.id ? cat.color : '#64748B'} 
-                      />
-                      <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
-            )}
+            {/* Category selection */}
+            <Text style={styles.label}>Categoría</Text>
+            <View style={styles.categoryGrid}>
+              {(type === 'expense' ? categories : incomeCategories || []).map(cat => (
+                <TouchableOpacity 
+                  key={cat.id} 
+                  style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
+                  onPress={() => setCategory(cat.id)}
+                >
+                  <Ionicons 
+                    name={cat.icon || 'cart-outline'} 
+                    size={20} 
+                    color={category === cat.id ? cat.color : '#64748B'} 
+                  />
+                  <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* Date Selection */}
             <TouchableOpacity style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
@@ -221,7 +217,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             )}
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.saveBtnText}>Guardar Movimiento</Text>
+              <Text style={styles.saveBtnText}>{initialData ? 'Guardar Cambios' : 'Guardar Movimiento'}</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
