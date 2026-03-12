@@ -182,7 +182,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
                   <View style={styles.txInfo}>
                     <Text style={styles.txDesc}>{item.description}</Text>
                     <View style={[styles.txCatChip, { backgroundColor: catColor + '18' }]}>
-                      <Text style={[styles.txCatText, { color: catColor }]}>{item.category}</Text>
+                      <Text style={[styles.txCatText, { color: catColor }]}>{isIncome ? 'Ingreso' : item.category}</Text>
                     </View>
                   </View>
                   <View style={styles.txRight}>
@@ -235,7 +235,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
                   <View style={styles.modalRows}>
                     {[
                       { label: 'Tipo', value: isIncome ? 'Ingreso' : 'Gasto', color: isIncome ? THEME.colors.success : THEME.colors.error },
-                      { label: 'Categoría', value: selectedTx.category, color: catColor },
+                      { label: 'Categoría', value: isIncome ? 'Ingreso' : selectedTx.category, color: catColor },
                       { label: 'Fecha', value: new Date(selectedTx.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) },
                       ...(selectedTx.refundAmount > 0 ? [{ label: 'Reembolso', value: `${Number(selectedTx.refundAmount).toFixed(2)}€`, color: THEME.colors.warning }] : []),
                     ].map(row => (

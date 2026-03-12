@@ -22,7 +22,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       setDescription(initialData.description);
       setAmount(initialData.amount.toString());
       setType(initialData.type);
-      setCategory(initialData.category);
+      setCategory(initialData.type === 'income' ? 'Ingreso' : initialData.category);
       setIsShared(initialData.isShared);
       setMyPart(initialData.myPart.toString());
       setDate(new Date(initialData.date));
@@ -50,7 +50,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       myPart: myPartValue,
       refundAmount: refund,
       type,
-      category,
+      category: type === 'income' ? 'Ingreso' : category,
       date: date.toISOString(),
     };
 
@@ -64,7 +64,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setIsShared(false);
     setMyPart('');
     setDate(new Date());
-    setCategory(type === 'expense' ? (categories[0]?.id || '') : (incomeCategories[0]?.id || ''));
+    setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
 
   return (
@@ -90,7 +90,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             <View style={styles.typeRow}>
               <TouchableOpacity 
                 style={[styles.typeBtn, type === 'income' && styles.typeBtnActiveIncome]}
-                onPress={() => { setType('income'); setCategory(incomeCategories[0]?.id || ''); }}
+                onPress={() => { setType('income'); setCategory('Ingreso'); }}
               >
                 <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>Ingreso</Text>
               </TouchableOpacity>
@@ -152,23 +152,27 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             )}
 
             {/* Category selection */}
-            <Text style={styles.label}>Categoría</Text>
-            <View style={styles.categoryGrid}>
-              {(type === 'expense' ? categories : incomeCategories || []).map(cat => (
-                <TouchableOpacity 
-                  key={cat.id} 
-                  style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
-                  onPress={() => setCategory(cat.id)}
-                >
-                  <Ionicons 
-                    name={cat.icon || 'cart-outline'} 
-                    size={20} 
-                    color={category === cat.id ? cat.color : '#64748B'} 
-                  />
-                  <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {type === 'expense' && (
+              <>
+                <Text style={styles.label}>Categoría</Text>
+                <View style={styles.categoryGrid}>
+                  {(categories || []).map(cat => (
+                    <TouchableOpacity 
+                      key={cat.id} 
+                      style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
+                      onPress={() => setCategory(cat.id)}
+                    >
+                      <Ionicons 
+                        name={cat.icon || 'cart-outline'} 
+                        size={20} 
+                        color={category === cat.id ? cat.color : '#64748B'} 
+                      />
+                      <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Date Selection */}
             <TouchableOpacity style={styles.dateRow} onPress={() => setShowDatePicker(true)}>

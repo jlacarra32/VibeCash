@@ -104,38 +104,40 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
         </View>
 
         {/* Category filter grid — wrapped, vertical scroll */}
-        <View style={styles.catSection}>
-          <Text style={styles.catSectionLabel}>Categoría</Text>
-          <View style={styles.catGrid}>
-            <TouchableOpacity
-              style={[styles.catCard, !selectedCategory && styles.catCardActive]}
-              onPress={() => setSelectedCategory(null)}
-            >
-              <View style={[styles.catCardIcon, !selectedCategory && { backgroundColor: THEME.colors.accent + '30' }]}>
-                <Ionicons name="apps-outline" size={18} color={!selectedCategory ? THEME.colors.accent : THEME.colors.textSecondary} />
-              </View>
-              <Text style={[styles.catCardText, !selectedCategory && { color: THEME.colors.accent }]}>Todas</Text>
-            </TouchableOpacity>
+        {typeFilter !== 'income' && (
+          <View style={styles.catSection}>
+            <Text style={styles.catSectionLabel}>Categoría</Text>
+            <View style={styles.catGrid}>
+              <TouchableOpacity
+                style={[styles.catCard, !selectedCategory && styles.catCardActive]}
+                onPress={() => setSelectedCategory(null)}
+              >
+                <View style={[styles.catCardIcon, !selectedCategory && { backgroundColor: THEME.colors.accent + '30' }]}>
+                  <Ionicons name="apps-outline" size={18} color={!selectedCategory ? THEME.colors.accent : THEME.colors.textSecondary} />
+                </View>
+                <Text style={[styles.catCardText, !selectedCategory && { color: THEME.colors.accent }]}>Todas</Text>
+              </TouchableOpacity>
 
-            {uniqueCats.map(cat => {
-              const isActive = selectedCategory === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.catCard, isActive && { borderColor: cat.color, backgroundColor: cat.color + '12' }]}
-                  onPress={() => setSelectedCategory(isActive ? null : cat.id)}
-                >
-                  <View style={[styles.catCardIcon, { backgroundColor: cat.color + (isActive ? '30' : '15') }]}>
-                    <Ionicons name={cat.icon || 'ellipse-outline'} size={18} color={cat.color} />
-                  </View>
-                  <Text style={[styles.catCardText, isActive && { color: cat.color, fontWeight: '800' }]}>
-                    {cat.id}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+              {uniqueCats.map(cat => {
+                const isActive = selectedCategory === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.catCard, isActive && { borderColor: cat.color, backgroundColor: cat.color + '12' }]}
+                    onPress={() => setSelectedCategory(isActive ? null : cat.id)}
+                  >
+                    <View style={[styles.catCardIcon, { backgroundColor: cat.color + (isActive ? '30' : '15') }]}>
+                      <Ionicons name={cat.icon || 'ellipse-outline'} size={18} color={cat.color} />
+                    </View>
+                    <Text style={[styles.catCardText, isActive && { color: cat.color, fontWeight: '800' }]}>
+                      {cat.id}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Transaction list */}
         <View style={styles.listContent}>
@@ -153,7 +155,7 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
                   <Text style={styles.txTitle}>{tx.description}</Text>
                   <View style={styles.txMeta}>
                     <View style={[styles.txCatChip, { backgroundColor: catColor + '18' }]}>
-                      <Text style={[styles.txCatChipText, { color: catColor }]}>{tx.category}</Text>
+                      <Text style={[styles.txCatChipText, { color: catColor }]}>{isIncome ? 'Ingreso' : tx.category}</Text>
                     </View>
                     <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
                   </View>

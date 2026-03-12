@@ -16,5 +16,5 @@ export const getCategoryIcon = (catId, type, categories, incomeCategories) => {
 export const getCategoryColor = (catId, type, categories, incomeCategories) => {
   const list = (type === 'income' ? incomeCategories : categories) || [];
   const cat = list.find(c => c.id === catId);
-  return cat ? cat.color : THEME.colors.textSecondary;
+  return cat ? cat.color : (type === 'income' ? THEME.colors.success : THEME.colors.textSecondary);
 };

@@ -93,13 +93,12 @@ export default function ProfileScreen({
 
   const handleAddCategory = () => {
     if (!newCatName.trim()) return;
-    const cat = { id: newCatName.trim(), color: newCatColor, icon: getSmartIcon(newCatName, newCatType) };
-    if (newCatType === 'income') setIncomeCategories(prev => [...prev, cat]);
-    else setCategories(prev => [...prev, cat]);
+    const cat = { id: newCatName.trim(), color: newCatColor, icon: getSmartIcon(newCatName, 'expense') };
+    setCategories(prev => [...prev, cat]);
     closeAddModal();
   };
 
-  const totalCats = (categories?.length || 0) + (incomeCategories?.length || 0);
+  const totalCats = categories?.length || 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>

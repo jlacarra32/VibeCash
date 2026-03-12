@@ -42,8 +42,4 @@ export const CATEGORIES = [
   { id: 'Otros', color: '#94A3B8', icon: 'ellipsis-horizontal-outline' },
 ];
 
-export const INCOME_CATEGORIES = [
-  { id: 'Bizum', color: '#6366F1', icon: 'phone-portrait-outline' },
-  { id: 'Mes', color: '#EAB308', icon: 'cash-outline' },
-  { id: 'Otros', color: '#22C55E', icon: 'sparkles-outline' },
-];
+export const INCOME_CATEGORIES = [];

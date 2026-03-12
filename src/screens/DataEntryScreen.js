@@ -193,7 +193,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
                   <Text style={styles.txTitle}>{tx.description}</Text>
                   <View style={styles.txMeta}>
                     <View style={[styles.catChip, { backgroundColor: catColor + '18' }]}>
-                      <Text style={[styles.catChipText, { color: catColor }]}>{tx.category}</Text>
+                      <Text style={[styles.catChipText, { color: catColor }]}>{isIncome ? 'Ingreso' : tx.category}</Text>
                     </View>
                     <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
                   </View>
