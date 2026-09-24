@@ -93,8 +93,15 @@ export default function ProfileScreen({
   };
 
   const handleAddCategory = () => {
-    if (!newCatName.trim()) return;
-    const cat = { id: newCatName.trim(), color: newCatColor, icon: getSmartIcon(newCatName, 'expense') };
+    const name = newCatName.trim();
+    if (!name) return;
+    // El nombre hace de identificador: no puede repetirse (sin distinguir mayúsculas)
+    const exists = (categories || []).some(c => c.id.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      showAlert('Categoría repetida', `Ya existe una categoría llamada "${name}".`);
+      return;
+    }
+    const cat = { id: name, color: newCatColor, icon: getSmartIcon(name, 'expense') };
     setCategories(prev => [...prev, cat]);
     closeAddModal();
   };
@@ -178,7 +185,12 @@ export default function ProfileScreen({
                 </View>
                 <Text style={[styles.catCardName, { color: cat.color }]}>{cat.id}</Text>
                 <TouchableOpacity
-                  onPress={() => setCategories(prev => prev.filter(c => c.id !== cat.id))}
+                  onPress={() => confirmAction(
+                    'Eliminar categoría',
+                    `¿Eliminar "${cat.id}"? Los movimientos que ya tengas en esta categoría no se borran.`,
+                    () => setCategories(prev => prev.filter(c => c.id !== cat.id)),
+                    'Eliminar'
+                  )}
                   style={styles.catRemoveBtn}
                 >
                   <Ionicons name="close-circle" size={16} color={THEME.colors.error} />

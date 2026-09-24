@@ -238,9 +238,14 @@ export default function ChartsScreen({ transactions, categories }) {
     return true;
   }).length;
 
-  // Best category (highest expense)
-  const catEntries = (categories || [])
-    .map(cat => ({ cat, val: displayCategories[cat.id] || 0 }))
+  // Todas las categorías con gasto, incluidas las que el usuario ya borró
+  // (sus movimientos siguen existiendo y deben contar en el reparto)
+  const catEntries = Object.entries(displayCategories)
+    .map(([id, val]) => {
+      const known = (categories || []).find(c => c.id === id);
+      const cat = known || { id, label: `${id} (eliminada)`, color: THEME.colors.textSecondary, icon: 'help-circle-outline' };
+      return { cat, val };
+    })
     .filter(e => e.val > 0)
     .sort((a, b) => b.val - a.val);
 
@@ -374,7 +379,7 @@ export default function ChartsScreen({ transactions, categories }) {
                 <View style={[styles.topBadge, { backgroundColor: topCat.cat.color + '20' }]}>
                   <Ionicons name={topCat.cat.icon || 'flame'} size={12} color={topCat.cat.color} />
                   <Text style={[styles.topBadgeText, { color: topCat.cat.color }]}>
-                    Top: {topCat.cat.id}
+                    Top: {topCat.cat.label || topCat.cat.id}
                   </Text>
                 </View>
               )}
@@ -392,7 +397,7 @@ export default function ChartsScreen({ transactions, categories }) {
                   {/* Bar + info */}
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <View style={styles.catTopRow}>
-                      <Text style={styles.catName}>{cat.id}</Text>
+                      <Text style={styles.catName}>{cat.label || cat.id}</Text>
                       <Text style={[styles.catAmount, { color: cat.color }]}>{val.toFixed(2)}€</Text>
                     </View>
                     <View style={styles.catBarRow}>
@@ -430,7 +435,7 @@ export default function ChartsScreen({ transactions, categories }) {
                   <View key={cat.id} style={styles.distLegendItem}>
                     <View style={[styles.distDot, { backgroundColor: cat.color }]} />
                     <View>
-                      <Text style={styles.distName}>{cat.id}</Text>
+                      <Text style={styles.distName}>{cat.label || cat.id}</Text>
                       <Text style={[styles.distPct, { color: cat.color }]}>{pct}%</Text>
                     </View>
                   </View>
