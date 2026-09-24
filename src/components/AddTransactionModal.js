@@ -40,6 +40,18 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, visible, defaultDate]);
 
+  // Estado del selector de fecha
+  const selectedKey = toLocalDateKey(date);
+  const todayKey = toLocalDateKey(new Date());
+  const yesterdayKey = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDateKey(d); })();
+  const dateMode = selectedKey === todayKey ? 'today' : selectedKey === yesterdayKey ? 'yesterday' : 'other';
+  const otherDateLabel = dateMode === 'other' && isValidDate(date)
+    ? date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+    : 'Otra fecha';
+  const fullDateLabel = isValidDate(date)
+    ? date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+
   const handleSave = () => {
     const normalizedAmount = amount.replace(',', '.');
     if (!description || !normalizedAmount || isNaN(parseFloat(normalizedAmount))) {
@@ -191,53 +203,68 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
               </>
             )}
 
-            {/* Date Selection */}
-            <TouchableOpacity style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
-              <Ionicons name="calendar-outline" size={20} color={THEME.colors.accent} />
-              <Text style={styles.dateText}>Fecha: {date.toLocaleDateString()}</Text>
-            </TouchableOpacity>
+            {/* Fecha: accesos rápidos Hoy / Ayer y "Otra fecha" que abre el
+                calendario del sistema directamente, sin pasos intermedios */}
+            <Text style={styles.label}>Fecha</Text>
+            <View style={styles.dateChips}>
+              <TouchableOpacity
+                style={[styles.dateChip, dateMode === 'today' && styles.dateChipActive]}
+                onPress={() => setDate(new Date())}
+              >
+                <Text style={[styles.dateChipText, dateMode === 'today' && styles.dateChipTextActive]}>Hoy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateChip, dateMode === 'yesterday' && styles.dateChipActive]}
+                onPress={() => setDate(fromLocalDateKey(yesterdayKey))}
+              >
+                <Text style={[styles.dateChipText, dateMode === 'yesterday' && styles.dateChipTextActive]}>Ayer</Text>
+              </TouchableOpacity>
 
-            {showDatePicker && (
-              Platform.OS === 'web' ? (
-                <View style={styles.datePickerWeb}>
+              {Platform.OS === 'web' ? (
+                // En web, un <input type="date"> invisible cubre el botón: al
+                // tocarlo se abre el calendario del navegador a la primera
+                <View style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}>
+                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? '#FFF' : THEME.colors.textSecondary} />
+                  <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
                   <input
                     type="date"
-                    id="dateInput"
-                    defaultValue={toLocalDateKey(date) || ''}
+                    aria-label="Elegir otra fecha"
+                    value={selectedKey || ''}
+                    onClick={(e) => { try { e.currentTarget.showPicker && e.currentTarget.showPicker(); } catch (_err) { /* navegador sin showPicker: el toque ya abre el calendario */ } }}
                     onChange={(e) => {
                       // Si el campo se vacía o es inválido, se mantiene la fecha anterior
-                      const selectedDate = fromLocalDateKey(e.target.value);
-                      if (selectedDate) {
-                        setDate(selectedDate);
-                        setShowDatePicker(false);
-                      }
+                      const picked = fromLocalDateKey(e.target.value);
+                      if (picked) setDate(picked);
                     }}
                     style={{
-                      width: '100%',
-                      padding: '15px',
-                      borderRadius: '15px',
-                      backgroundColor: '#0F172A',
-                      color: '#FFF',
-                      border: `1px solid ${THEME.colors.border}`,
-                      fontSize: '16px',
-                      marginBottom: '20px'
+                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                      opacity: 0, cursor: 'pointer', border: 'none', padding: 0, margin: 0,
                     }}
                   />
-                  <TouchableOpacity style={styles.webDateClose} onPress={() => setShowDatePicker(false)}>
-                    <Text style={{ color: THEME.colors.accent, fontWeight: 'bold' }}>Cerrar</Text>
-                  </TouchableOpacity>
                 </View>
               ) : (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (selectedDate) setDate(selectedDate);
-                  }}
-                />
-              )
+                <TouchableOpacity
+                  style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? '#FFF' : THEME.colors.textSecondary} />
+                  <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={styles.dateFull}>{fullDateLabel}</Text>
+
+            {showDatePicker && Platform.OS !== 'web' && (
+              <DateTimePicker
+                value={isValidDate(date) ? date : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                themeVariant="dark"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (event?.type !== 'dismissed' && selectedDate) setDate(selectedDate);
+                }}
+              />
             )}
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
@@ -371,18 +398,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
   },
-  dateRow: {
+  dateChips: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  dateChip: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    padding: 15,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 13,
     borderRadius: 15,
-    marginBottom: 25,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  dateText: {
+  dateChipOther: {
+    flex: 1.4,
+  },
+  dateChipActive: {
+    backgroundColor: THEME.colors.accent,
+    borderColor: THEME.colors.accent,
+  },
+  dateChipText: {
+    color: THEME.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dateChipTextActive: {
     color: '#FFF',
-    marginLeft: 10,
-    fontWeight: '600',
+  },
+  dateFull: {
+    color: THEME.colors.textSecondary,
+    fontSize: 12,
+    marginTop: 8,
+    marginBottom: 25,
+    marginLeft: 4,
   },
   saveBtn: {
     backgroundColor: THEME.colors.accent,
@@ -401,15 +455,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
-  datePickerWeb: {
-    backgroundColor: '#0F172A',
-    borderRadius: 18,
-    padding: 10,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  webDateClose: {
-    marginTop: 5,
-    padding: 10,
-  }
 });
