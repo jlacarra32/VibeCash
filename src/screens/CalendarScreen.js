@@ -22,14 +22,25 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTx, setSelectedTx] = useState(null);
 
-  // Totals for current visible month
-  const now = new Date();
+  // Mes que se está viendo en el calendario (los totales siguen al mes visible)
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+  const isCurrentMonth = (() => {
+    const now = new Date();
+    return visibleMonth.year === now.getFullYear() && visibleMonth.month === now.getMonth();
+  })();
+  const visibleMonthLabel = isCurrentMonth
+    ? 'este mes'
+    : `${LocaleConfig.locales['es'].monthNames[visibleMonth.month].toLowerCase()} ${visibleMonth.year}`;
+
   const monthTransactions = useMemo(() =>
     (transactions || []).filter(t => {
       if (!t.date) return false;
       const d = new Date(t.date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }), [transactions]);
+      return d.getMonth() === visibleMonth.month && d.getFullYear() === visibleMonth.year;
+    }), [transactions, visibleMonth]);
 
   const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
@@ -80,7 +91,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
           <Text style={[styles.headerBalance, { color: monthBalance >= 0 ? THEME.colors.success : THEME.colors.error }]}>
             {monthBalance >= 0 ? '+' : ''}{monthBalance.toFixed(0)}€
           </Text>
-          <Text style={styles.headerBalanceLabel}>este mes</Text>
+          <Text style={styles.headerBalanceLabel}>{visibleMonthLabel}</Text>
         </View>
       </View>
 
@@ -131,6 +142,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
             }}
             markedDates={markedDates}
             onDayPress={day => setSelectedDate(day.dateString)}
+            onMonthChange={m => setVisibleMonth({ year: m.year, month: m.month - 1 })}
             firstDay={1}
           />
         </View>

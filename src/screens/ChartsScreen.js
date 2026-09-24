@@ -216,10 +216,12 @@ export default function ChartsScreen({ transactions, categories }) {
   const displayExpense = netMode ? cashFlow.totalExpenseNet : cashFlow.totalExpense;
   const displayCategories = netMode ? cashFlow.categoryTotalsNet : cashFlow.categoryTotals;
 
+  // Puede ser negativo: si gastas más de lo que ingresas, se muestra el déficit
   const savingsRate =
     cashFlow.totalIncome > 0
-      ? Math.max(0, ((cashFlow.totalIncome - displayExpense) / cashFlow.totalIncome) * 100)
+      ? ((cashFlow.totalIncome - displayExpense) / cashFlow.totalIncome) * 100
       : 0;
+  const savingsColor = savingsRate < 0 ? THEME.colors.error : THEME.colors.warning;
 
   const txCount = (transactions || []).filter(t => {
     if (timeFilter === 'all') return true;
@@ -317,7 +319,7 @@ export default function ChartsScreen({ transactions, categories }) {
             icon="save-outline"
             label="Ahorro"
             value={`${savingsRate.toFixed(0)}%`}
-            color={THEME.colors.warning}
+            color={savingsColor}
             sub={`${txCount} movimientos`}
           />
         </View>
@@ -347,7 +349,7 @@ export default function ChartsScreen({ transactions, categories }) {
               </View>
               <HorizBar
                 color={THEME.colors.error}
-                pct={cashFlow.totalIncome > 0 ? displayExpense / cashFlow.totalIncome : (displayExpense > 0 ? 1 : 0)}
+                pct={cashFlow.totalIncome > 0 ? Math.min(1, displayExpense / cashFlow.totalIncome) : (displayExpense > 0 ? 1 : 0)}
                 delay={150}
               />
               <Text style={styles.bvVal}>{displayExpense.toFixed(0)}€</Text>
@@ -356,12 +358,12 @@ export default function ChartsScreen({ transactions, categories }) {
             {cashFlow.totalIncome > 0 && (
               <View style={[styles.bvRow, { marginTop: 14 }]}>
                 <View style={styles.bvLabelWrap}>
-                  <View style={[styles.bvDot, { backgroundColor: THEME.colors.warning }]} />
-                  <Text style={styles.bvLabel}>Ahorro</Text>
+                  <View style={[styles.bvDot, { backgroundColor: savingsColor }]} />
+                  <Text style={styles.bvLabel}>{savingsRate < 0 ? 'Déficit' : 'Ahorro'}</Text>
                 </View>
                 <HorizBar
-                  color={THEME.colors.warning}
-                  pct={savingsRate / 100}
+                  color={savingsColor}
+                  pct={Math.min(1, Math.abs(savingsRate) / 100)}
                   delay={300}
                 />
                 <Text style={styles.bvVal}>{(cashFlow.totalIncome - displayExpense).toFixed(0)}€</Text>
