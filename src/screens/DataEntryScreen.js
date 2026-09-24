@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, Platform, Alert } from 'react-native';
-
-const TOP = Platform.OS === 'web' ? 20 : 50;
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
 
-export default function DataEntryScreen({ transactions, setTransactions, onEdit, userName, categories, incomeCategories, onGoToHistory }) {
+const TOP = Platform.OS === 'web' ? 20 : 50;
+
+export default function DataEntryScreen({ transactions, onEdit, onDelete, userName, categories, incomeCategories, onGoToHistory }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
@@ -51,39 +51,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
     requestAnimationFrame(animate);
   }, [timeFilter, transactions]);
 
-  const handleResetData = () => {
-    Alert.alert(
-      "Borrar Todo",
-      "¿Estás seguro de que quieres borrar todos los datos?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Borrar", style: "destructive", onPress: () => setTransactions([]) }
-      ]
-    );
-  };
-
   const cashFlow = calculateCashFlow(transactions, timeFilter);
-
-  const deleteTransaction = (id) => {
-    const performDelete = () => setTransactions(prev => prev.filter(t => t.id !== id));
-
-    if (Platform.OS === 'web') {
-      if (window.confirm("¿Estás seguro de que quieres eliminar este registro?")) {
-        performDelete();
-      }
-    } else {
-      Alert.alert(
-        "Borrar Movimiento",
-        "¿Estás seguro de que quieres eliminar este registro?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Borrar", style: "destructive", onPress: performDelete }
-        ]
-      );
-    }
-  };
-
-
 
   return (
     <View style={styles.container}>
@@ -207,7 +175,7 @@ export default function DataEntryScreen({ transactions, setTransactions, onEdit,
                     <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
                       <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteTransaction(tx.id)} style={styles.txActionBtn}>
+                    <TouchableOpacity onPress={() => onDelete(tx.id)} style={styles.txActionBtn}>
                       <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
                     </TouchableOpacity>
                   </View>

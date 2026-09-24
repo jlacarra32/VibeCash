@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  Alert, ScrollView, Modal, Platform,
+  ScrollView, Modal, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
+import { showAlert, confirmAction } from '../logic/dialogs';
 
 const TOP = Platform.OS === 'web' ? 20 : 50;
 
@@ -80,9 +81,9 @@ export default function ProfileScreen({
   const newCatType = 'expense'; // Forzado a gasto
 
   const handleUpdate = () => {
-    if (!tempName.trim()) { Alert.alert('Error', 'El nombre no puede estar vacío'); return; }
+    if (!tempName.trim()) { showAlert('Error', 'El nombre no puede estar vacío'); return; }
     setUserName(tempName.trim());
-    Alert.alert('✅ Actualizado', 'Nombre guardado correctamente');
+    showAlert('Actualizado', 'Nombre guardado correctamente');
   };
 
   const closeAddModal = () => {
@@ -202,15 +203,12 @@ export default function ProfileScreen({
 
           <TouchableOpacity
             style={styles.dangerRowSoft}
-            onPress={() => {
-              const run = () => setTransactions([]);
-              if (Platform.OS === 'web') {
-                if (window.confirm('¿Borrar todos los movimientos? Se conservarán nombre y categorías.')) run();
-              } else {
-                Alert.alert('Borrar Movimientos', '¿Seguro? Se conservarán nombre y categorías.',
-                  [{ text: 'Cancelar', style: 'cancel' }, { text: 'Borrar', style: 'destructive', onPress: run }]);
-              }
-            }}
+            onPress={() => confirmAction(
+              'Borrar movimientos',
+              '¿Borrar todos los movimientos? Se conservarán nombre y categorías.',
+              () => setTransactions([]),
+              'Borrar'
+            )}
           >
             <View style={[styles.dangerRowIcon, { backgroundColor: THEME.colors.warning + '20' }]}>
               <Ionicons name="trash-outline" size={18} color={THEME.colors.warning} />
@@ -224,14 +222,12 @@ export default function ProfileScreen({
 
           <TouchableOpacity
             style={styles.dangerRowHard}
-            onPress={() => {
-              if (Platform.OS === 'web') {
-                if (window.confirm('REINICIO TOTAL: se borrará absolutamente todo. ¿Seguro?')) onFullReset();
-              } else {
-                Alert.alert('REINICIO TOTAL', 'Se borrará TODO: nombre, categorías y movimientos.',
-                  [{ text: 'Cancelar', style: 'cancel' }, { text: 'REINICIAR', style: 'destructive', onPress: onFullReset }]);
-              }
-            }}
+            onPress={() => confirmAction(
+              'Reinicio total',
+              'Se borrará TODO: nombre, categorías y movimientos. ¿Seguro?',
+              onFullReset,
+              'Reiniciar'
+            )}
           >
             <View style={[styles.dangerRowIcon, { backgroundColor: THEME.colors.error + '20' }]}>
               <Ionicons name="refresh-circle-outline" size={18} color={THEME.colors.error} />

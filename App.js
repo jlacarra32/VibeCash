@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Alert, Platform, TextInput, Animated } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import DataEntryScreen from './src/screens/DataEntryScreen';
 import ChartsScreen from './src/screens/ChartsScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
+import { showAlert, confirmAction } from './src/logic/dialogs';
 
 // Memoria de emergencia por si el móvil bloquea el almacenamiento
 let backupStorage = {};
@@ -181,29 +182,19 @@ export default function App() {
       setCategories(CATEGORIES);
       setIncomeCategories(INCOME_CATEGORIES);
       setCurrentScreen('DataEntry');
-      Alert.alert("Éxito", "La aplicación se ha reiniciado por completo.");
+      showAlert('Listo', 'La aplicación se ha reiniciado por completo.');
     } catch (e) {
-      Alert.alert("Error", "No se pudo reiniciar la aplicación.");
+      showAlert('Error', 'No se pudo reiniciar la aplicación.');
     }
   };
 
   const handleDeleteTransaction = (id) => {
-    const performDelete = () => setTransactions(prev => prev.filter(t => t.id !== id));
-
-    if (Platform.OS === 'web') {
-      if (window.confirm("¿Estás seguro de que quieres eliminar este registro?")) {
-        performDelete();
-      }
-    } else {
-      Alert.alert(
-        "Borrar Movimiento",
-        "¿Estás seguro de que quieres eliminar este registro?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Borrar", style: "destructive", onPress: performDelete }
-        ]
-      );
-    }
+    confirmAction(
+      'Borrar movimiento',
+      '¿Estás seguro de que quieres eliminar este registro?',
+      () => setTransactions(prev => prev.filter(t => t.id !== id)),
+      'Borrar'
+    );
   };
 
   return (
@@ -215,9 +206,9 @@ export default function App() {
         <Animated.View style={[styles.content, { opacity: screenOpacity }]}>
           {currentScreen === 'DataEntry' 
             ? <DataEntryScreen 
-                transactions={transactions} 
-                setTransactions={setTransactions} 
+                transactions={transactions}
                 onEdit={openEditModal}
+                onDelete={handleDeleteTransaction}
                 userName={userName}
                 categories={categories}
                 incomeCategories={incomeCategories}

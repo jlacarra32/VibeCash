@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { THEME } from '../constants/theme';
 import { toLocalDateKey, fromLocalDateKey, isValidDate } from '../logic/dates';
+import { showAlert } from '../logic/dialogs';
 
 export default function AddTransactionModal({ visible, onClose, onSave, initialData, categories, incomeCategories }) {
   const [description, setDescription] = useState('');
@@ -35,7 +36,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
   const handleSave = () => {
     const normalizedAmount = amount.replace(',', '.');
     if (!description || !normalizedAmount || isNaN(parseFloat(normalizedAmount))) {
-      alert("Por favor rellena descripción y un monto válido");
+      showAlert('Faltan datos', 'Por favor rellena descripción y un importe válido');
       return;
     }
 
