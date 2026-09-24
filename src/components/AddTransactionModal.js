@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { THEME, CATEGORIES, INCOME_CATEGORIES } from '../constants/theme';
+import { THEME } from '../constants/theme';
+import { toLocalDateKey, fromLocalDateKey, isValidDate } from '../logic/dates';
 
 export default function AddTransactionModal({ visible, onClose, onSave, initialData, categories, incomeCategories }) {
   const [description, setDescription] = useState('');
@@ -51,7 +52,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       refundAmount: refund,
       type,
       category: type === 'income' ? 'Ingreso' : category,
-      date: date.toISOString(),
+      date: (isValidDate(date) ? date : new Date()).toISOString(),
     };
 
     onSave(newTx);
@@ -186,11 +187,14 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                   <input
                     type="date"
                     id="dateInput"
-                    defaultValue={date.toISOString().split('T')[0]}
+                    defaultValue={toLocalDateKey(date) || ''}
                     onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      if (selectedDate) setDate(selectedDate);
-                      setShowDatePicker(false);
+                      // Si el campo se vacía o es inválido, se mantiene la fecha anterior
+                      const selectedDate = fromLocalDateKey(e.target.value);
+                      if (selectedDate) {
+                        setDate(selectedDate);
+                        setShowDatePicker(false);
+                      }
                     }}
                     style={{
                       width: '100%',

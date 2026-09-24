@@ -4,6 +4,7 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { getCategoryColor, getCategoryIcon } from '../logic/helpers';
+import { toLocalDateKey } from '../logic/dates';
 
 const TOP = Platform.OS === 'web' ? 20 : 50;
 
@@ -17,7 +18,7 @@ LocaleConfig.locales['es'] = {
 LocaleConfig.defaultLocale = 'es';
 
 export default function CalendarScreen({ transactions, categories, incomeCategories }) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateKey(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTx, setSelectedTx] = useState(null);
 
@@ -38,8 +39,8 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
   const markedDates = useMemo(() => {
     const marks = {};
     (transactions || []).forEach(t => {
-      if (!t.date) return;
-      const dateStr = t.date.split('T')[0];
+      const dateStr = toLocalDateKey(t.date);
+      if (!dateStr) return;
       if (!marks[dateStr]) marks[dateStr] = { dots: [] };
       const color = t.type === 'income' ? THEME.colors.success : THEME.colors.error;
       const alreadyHas = marks[dateStr].dots.some(d => d.color === color);
@@ -57,7 +58,7 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
 
   // Transactions for selected day
   const dailyTransactions = useMemo(() =>
-    (transactions || []).filter(t => t.date && t.date.split('T')[0] === selectedDate),
+    (transactions || []).filter(t => t.date && toLocalDateKey(t.date) === selectedDate),
     [transactions, selectedDate]);
 
   const dayIncome = dailyTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
