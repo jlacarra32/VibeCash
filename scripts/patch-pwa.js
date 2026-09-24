@@ -28,7 +28,7 @@ iconDestinations.forEach((dest) => {
 const manifest = {
   name: 'VibeCash',
   short_name: 'VibeCash',
-  description: 'VibeCash - Tu control de gastos con estilo',
+  description: 'VibeCash — tus cuentas, claras',
   start_url: '/',
   display: 'standalone',
   orientation: 'portrait',

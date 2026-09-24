@@ -24,10 +24,10 @@ Genera la web en `dist/` y añade el manifest y los iconos de PWA (`scripts/patc
 ## Estructura
 
 - `App.js`: estado global, carga y guardado de datos, navegación y onboarding.
-- `src/screens/`: pantallas (Inicio, Análisis, Calendario, Historial, Perfil).
-- `src/components/AddTransactionModal.js`: formulario para crear y editar movimientos.
-- `src/logic/`: cálculos (`cashFlow.js`), fechas en hora local (`dates.js`), diálogos web/móvil (`dialogs.js`) y utilidades (`helpers.js`).
-- `src/constants/theme.js`: colores, tipografía y categorías por defecto.
+- `src/screens/`: pantallas de las cuatro pestañas: Inicio (`DataEntryScreen`), Movimientos (`MovementsScreen`, que une `HistoryScreen` y `CalendarScreen`), Análisis (`ChartsScreen`) y Ajustes (`ProfileScreen`).
+- `src/components/`: piezas comunes (`ScreenHeader`, `Segmented`, `Sheet`, `TransactionRow`, `TransactionSheet`, `EmptyState`) y el formulario `AddTransactionModal`.
+- `src/logic/`: cálculos y periodos (`cashFlow.js`), fechas en hora local (`dates.js`), formato de importes y fechas en español (`format.js`), diálogos web/móvil (`dialogs.js`) y utilidades (`helpers.js`).
+- `src/constants/theme.js`: sistema de diseño "papel y tinta" (colores, fuentes Fraunces e Inter, tamaños, espacios) y categorías por defecto. Los colores antiguos de las categorías guardadas se convierten al pintarlos (`displayColor` en `helpers.js`), sin tocar los datos.
 
 ## Datos guardados
 
