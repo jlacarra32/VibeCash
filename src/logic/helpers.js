@@ -1,4 +1,5 @@
 import { THEME } from '../constants/theme';
+import { toLocalDateKey } from './dates';
 
 /**
  * Obtiene el icono de una categoría por su ID y tipo.
@@ -60,3 +61,21 @@ export const displayColor = (hex) => {
 /** Copia de las categorías con el color de pintado; no modifica lo guardado. */
 export const withDisplayColors = (categories) =>
   (categories || []).map(c => ({ ...c, color: displayColor(c.color) }));
+
+/**
+ * Agrupa movimientos (ya ordenados) por día local:
+ * [{ key: 'YYYY-MM-DD', items: [...] }, ...] conservando el orden.
+ */
+export const groupByDay = (transactions) => {
+  const groups = [];
+  const byKey = {};
+  (transactions || []).forEach(t => {
+    const key = toLocalDateKey(t.date) || 'sin-fecha';
+    if (!byKey[key]) {
+      byKey[key] = { key, items: [] };
+      groups.push(byKey[key]);
+    }
+    byKey[key].items.push(t);
+  });
+  return groups;
+};

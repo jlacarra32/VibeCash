@@ -60,6 +60,20 @@ export const THEME = {
   },
 };
 
+// Estilos de texto listos para usar: [THEME.text.body, { ... }]
+THEME.text = {
+  display: { fontFamily: THEME.fonts.display, fontSize: THEME.type.display, color: palette.ink, letterSpacing: -1 },
+  title: { fontFamily: THEME.fonts.display, fontSize: THEME.type.title, color: palette.ink, letterSpacing: -0.5 },
+  heading: { fontFamily: THEME.fonts.display, fontSize: THEME.type.heading, color: palette.ink },
+  body: { fontFamily: THEME.fonts.body, fontSize: THEME.type.body, color: palette.ink },
+  bodyMedium: { fontFamily: THEME.fonts.medium, fontSize: THEME.type.body, color: palette.ink },
+  small: { fontFamily: THEME.fonts.body, fontSize: THEME.type.small, color: palette.inkSoft },
+  // Etiqueta de sección: pequeña, espaciada, sin gritar
+  label: { fontFamily: THEME.fonts.medium, fontSize: THEME.type.caption, color: palette.inkSoft, letterSpacing: 0.6, textTransform: 'uppercase' },
+  // Cifras en listas: columnas alineadas
+  amount: { fontFamily: THEME.fonts.medium, fontSize: THEME.type.body, color: palette.ink, fontVariant: ['tabular-nums'] },
+};
+
 // Colores apagados para categorías
 export const CATEGORY_COLORS = [
   '#B5562F', // terracota
