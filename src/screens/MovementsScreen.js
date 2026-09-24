@@ -15,7 +15,7 @@ const VIEWS = [
 export default function MovementsScreen({
   view, onViewChange,
   transactions, categories, incomeCategories,
-  onEdit, onDelete, onAddForDate, onSelectedDateChange,
+  onOpen, onAddForDate, onSelectedDateChange,
 }) {
   return (
     <View style={styles.container}>
@@ -34,16 +34,14 @@ export default function MovementsScreen({
             incomeCategories={incomeCategories}
             onAddForDate={onAddForDate}
             onSelectedDateChange={onSelectedDateChange}
-            onEdit={onEdit}
-            onDelete={onDelete}
+            onOpen={onOpen}
           />
         ) : (
           <HistoryScreen
             transactions={transactions}
             categories={categories}
             incomeCategories={incomeCategories}
-            onEdit={onEdit}
-            onDelete={onDelete}
+            onOpen={onOpen}
           />
         )}
       </View>

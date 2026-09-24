@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated, KeyboardAvoidingView, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,9 @@ import { THEME, CATEGORIES, INCOME_CATEGORIES } from './src/constants/theme';
 import DataEntryScreen from './src/screens/DataEntryScreen';
 import ChartsScreen from './src/screens/ChartsScreen';
 import MovementsScreen from './src/screens/MovementsScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import AddTransactionModal from './src/components/AddTransactionModal';
+import TransactionSheet from './src/components/TransactionSheet';
 import { showAlert, confirmAction } from './src/logic/dialogs';
 import { fromLocalDateKey } from './src/logic/dates';
 import { withDisplayColors } from './src/logic/helpers';
@@ -64,8 +67,6 @@ const loadData = async (key) => {
   }
 };
 
-import AddTransactionModal from './src/components/AddTransactionModal';
-import ProfileScreen from './src/screens/ProfileScreen';
 
 // Pestañas de la barra inferior
 const TABS = [
@@ -102,7 +103,6 @@ export default function App() {
   const [transactions, setTransactions] = useState([]);
   const [userName, setUserName] = useState(null);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(0);
   const [tempUserName, setTempUserName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -186,15 +186,10 @@ export default function App() {
     setModalVisible(true);
   };
 
-  const handleNextOnboarding = () => {
-    if (onboardingStep < 2) {
-      setOnboardingStep(onboardingStep + 1);
-    } else {
-      if (tempUserName.trim()) {
-        setUserName(tempUserName.trim());
-        setHasSeenWelcome(true);
-      }
-    }
+  const finishOnboarding = () => {
+    if (!tempUserName.trim()) return;
+    setUserName(tempUserName.trim());
+    setHasSeenWelcome(true);
   };
 
   const handleFullReset = async () => {
@@ -209,21 +204,32 @@ export default function App() {
       setUserName(null);
       setTempUserName('');
       setHasSeenWelcome(false);
-      setOnboardingStep(0);
       setCategories(CATEGORIES);
       setIncomeCategories(INCOME_CATEGORIES);
       setCurrentScreen('DataEntry');
       showAlert('Listo', 'La aplicación se ha reiniciado por completo.');
-    } catch (e) {
+    } catch (_e) {
       showAlert('Error', 'No se pudo reiniciar la aplicación.');
     }
   };
 
-  const handleDeleteTransaction = (id) => {
+  // Detalle de un movimiento (hoja con Editar / Borrar), común a todas las pantallas
+  const [detailTx, setDetailTx] = useState(null);
+
+  const editFromDetail = (tx) => {
+    setDetailTx(null);
+    // En iOS no se puede abrir una hoja mientras otra se está cerrando
+    setTimeout(() => openEditModal(tx), Platform.OS === 'ios' ? 350 : 0);
+  };
+
+  const deleteFromDetail = (tx) => {
     confirmAction(
       'Borrar movimiento',
-      '¿Estás seguro de que quieres eliminar este registro?',
-      () => setTransactions(prev => prev.filter(t => t.id !== id)),
+      '¿Seguro que quieres borrar este movimiento?',
+      () => {
+        setTransactions(prev => prev.filter(t => t.id !== tx.id));
+        setDetailTx(null);
+      },
       'Borrar'
     );
   };
@@ -247,11 +253,11 @@ export default function App() {
             {currentScreen === 'DataEntry'
               ? <DataEntryScreen
                   transactions={transactions}
-                  onEdit={openEditModal}
-                  onDelete={handleDeleteTransaction}
                   userName={userName}
                   categories={displayCategories}
                   incomeCategories={displayIncomeCategories}
+                  onOpen={setDetailTx}
+                  onAdd={() => openAddModal()}
                   onGoToHistory={() => { setMovementsView('list'); navigate('Movements'); }}
                 />
               : currentScreen === 'Charts'
@@ -263,10 +269,9 @@ export default function App() {
                   transactions={transactions}
                   categories={displayCategories}
                   incomeCategories={displayIncomeCategories}
+                  onOpen={setDetailTx}
                   onAddForDate={openAddModal}
                   onSelectedDateChange={(dateKey) => { calendarDateRef.current = dateKey; }}
-                  onEdit={openEditModal}
-                  onDelete={handleDeleteTransaction}
                 />
               : <ProfileScreen
                   userName={userName}
@@ -274,8 +279,6 @@ export default function App() {
                   setTransactions={setTransactions}
                   categories={displayCategories}
                   setCategories={setCategories}
-                  incomeCategories={displayIncomeCategories}
-                  setIncomeCategories={setIncomeCategories}
                   onFullReset={handleFullReset}
                 />
             }
@@ -318,96 +321,63 @@ export default function App() {
           })}
         </View>
 
-        {/* Onboarding Overlay */}
+        {/* Bienvenida: una sola pantalla */}
         {!hasSeenWelcome && (
-          <View style={styles.onboardingOverlay}>
-            <View style={styles.onboardingCard}>
-              {onboardingStep === 0 && (
-                <View style={{ alignItems: 'center' }}>
-                  <View style={styles.welcomeIconCircle}>
-                    <Text style={{ fontSize: 60 }}>💰</Text>
-                  </View>
-                  <Text style={styles.onboardingTitle}>Bienvenido a VibeCash</Text>
-                  <Text style={styles.onboardingSub}>
-                    Controla tus gastos con estilo. Una aplicación diseñada para que gestionar tu dinero sea tan vibrante como tu vida.
-                  </Text>
-                  <View style={styles.privacyNote}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color={THEME.colors.success} style={{marginRight: 8}} />
-                    <Text style={styles.privacyText}>
-                      Tus datos se guardan <Text style={{fontWeight: 'bold'}}>solo en este dispositivo</Text>. El creador no tiene acceso a ellos en ningún momento.
-                    </Text>
-                  </View>
-                </View>
-              )}
+          <KeyboardAvoidingView
+            style={styles.onboarding}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <ScrollView contentContainerStyle={styles.onboardingScroll} keyboardShouldPersistTaps="handled">
+              <Text style={styles.onboardingBrand}>VibeCash</Text>
 
-              {onboardingStep === 1 && (
-                <View style={{ width: '100%' }}>
-                  <Text style={styles.onboardingTitle}>¿Qué puedes hacer?</Text>
-                  <View style={styles.featureRow}>
-                    <Text style={styles.featureEmoji}>📈</Text>
-                    <View>
-                      <Text style={styles.featureName}>Análisis Visual</Text>
-                      <Text style={styles.featureDesc}>Mira tus gastos en gráficas limpias.</Text>
-                    </View>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Text style={styles.featureEmoji}>🗓️</Text>
-                    <View>
-                      <Text style={styles.featureName}>Calendario</Text>
-                      <Text style={styles.featureDesc}>No pierdas de vista ningún día.</Text>
-                    </View>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Text style={styles.featureEmoji}>🎨</Text>
-                    <View>
-                      <Text style={styles.featureName}>Personalización</Text>
-                      <Text style={styles.featureDesc}>Crea categorías con tus emojis favoritos.</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {onboardingStep === 2 && (
-                <View style={{ width: '100%', alignItems: 'center' }}>
-                  <Text style={styles.onboardingTitle}>Último paso</Text>
-                  <Text style={styles.onboardingSub}>¿Cómo quieres que te llamemos?</Text>
-                  <TextInput
-                    style={styles.onboardingInput}
-                    placeholder="Tu nombre aquí..."
-                    placeholderTextColor={THEME.colors.textSecondary}
-                    value={tempUserName}
-                    onChangeText={setTempUserName}
-                    autoFocus
-                  />
-                </View>
-              )}
-
-              <TouchableOpacity 
-                style={[styles.onboardingBtn, onboardingStep === 2 && !tempUserName.trim() && { opacity: 0.5 }]} 
-                onPress={handleNextOnboarding}
-                disabled={onboardingStep === 2 && !tempUserName.trim()}
-              >
-                <Text style={styles.onboardingBtnText}>
-                  {onboardingStep < 2 ? 'Siguiente' : '¡Empezar ahora!'}
+              <View>
+                <Text style={styles.onboardingTitle}>Tus cuentas,{'\n'}claras.</Text>
+                <Text style={styles.onboardingSub}>
+                  Apunta lo que gastas en segundos y mira, sin agobios, a dónde va tu dinero.
                 </Text>
-              </TouchableOpacity>
-              
-              <View style={styles.stepIndicator}>
-                {[0, 1, 2].map(s => (
-                  <View 
-                    key={s} 
-                    style={[styles.stepDot, onboardingStep === s && styles.stepDotActive]} 
-                  />
-                ))}
+                <View style={styles.privacyNote}>
+                  <Ionicons name="lock-closed-outline" size={15} color={THEME.colors.income} />
+                  <Text style={styles.privacyText}>Todo se queda en este dispositivo. Nadie más lo ve.</Text>
+                </View>
               </View>
-            </View>
-          </View>
+
+              <View>
+                <Text style={styles.onboardingLabel}>¿Cómo te llamas?</Text>
+                <TextInput
+                  style={styles.onboardingInput}
+                  placeholder="Tu nombre"
+                  placeholderTextColor={THEME.colors.inkFaint}
+                  value={tempUserName}
+                  onChangeText={setTempUserName}
+                  onSubmitEditing={finishOnboarding}
+                  returnKeyType="go"
+                />
+                <TouchableOpacity
+                  style={[styles.onboardingBtn, !tempUserName.trim() && { opacity: 0.4 }]}
+                  onPress={finishOnboarding}
+                  disabled={!tempUserName.trim()}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.onboardingBtnText}>Empezar</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         )}
 
-        <AddTransactionModal 
-          visible={modalVisible} 
-          onClose={() => { setModalVisible(false); setEditingTransaction(null); }} 
-          onSave={handleSaveTransaction} 
+        <TransactionSheet
+          tx={detailTx}
+          categories={displayCategories}
+          incomeCategories={displayIncomeCategories}
+          onClose={() => setDetailTx(null)}
+          onEdit={editFromDetail}
+          onDelete={deleteFromDetail}
+        />
+
+        <AddTransactionModal
+          visible={modalVisible}
+          onClose={() => { setModalVisible(false); setEditingTransaction(null); }}
+          onSave={handleSaveTransaction}
           initialData={editingTransaction}
           defaultDate={newTxDate}
           categories={displayCategories}
@@ -466,122 +436,73 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-  onboardingOverlay: {
+  onboarding: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(244, 239, 230, 0.97)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: THEME.colors.background,
     zIndex: 1000,
-    padding: 30,
   },
-  onboardingCard: {
+  onboardingScroll: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    padding: 28,
+    paddingTop: 40,
     width: '100%',
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 35,
-    padding: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
+  onboardingBrand: {
+    fontFamily: THEME.fonts.displayItalic,
+    fontSize: 22,
+    color: THEME.colors.accent,
   },
   onboardingTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: THEME.colors.textPrimary,
-    marginBottom: 10,
+    ...THEME.text.display,
+    fontSize: 48,
+    lineHeight: 52,
+    marginTop: 40,
   },
   onboardingSub: {
-    fontSize: 15,
-    color: THEME.colors.textSecondary,
-    marginBottom: 25,
-    textAlign: 'center',
-  },
-  onboardingInput: {
-    width: '100%',
-    backgroundColor: THEME.colors.background,
-    borderRadius: 18,
-    padding: 20,
-    color: THEME.colors.textPrimary,
-    fontSize: 18,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    marginBottom: 25,
-    textAlign: 'center',
-  },
-  onboardingBtn: {
-    backgroundColor: THEME.colors.accent,
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderRadius: 20,
-    width: '100%',
-    alignItems: 'center',
-  },
-  onboardingBtnText: {
-    color: THEME.colors.onAccent,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  welcomeIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: THEME.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 25,
-    borderWidth: 2,
-    borderColor: THEME.colors.accent,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    backgroundColor: THEME.colors.background,
-    padding: 15,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  featureEmoji: {
-    fontSize: 28,
-    marginRight: 15,
-  },
-  featureName: {
-    color: THEME.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  featureDesc: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    marginTop: 25,
-    gap: 8,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: THEME.colors.border,
-  },
-  stepDotActive: {
-    backgroundColor: THEME.colors.accent,
-    width: 20,
+    ...THEME.text.body,
+    fontSize: 17,
+    lineHeight: 25,
+    color: THEME.colors.inkSoft,
+    marginTop: THEME.space.lg,
   },
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.colors.income + '14',
-    padding: 15,
-    borderRadius: 15,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: THEME.colors.income + '30',
+    gap: THEME.space.sm,
+    marginTop: THEME.space.xl,
   },
   privacyText: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
+    ...THEME.text.small,
+    color: THEME.colors.ink,
     flex: 1,
-  }
+  },
+  onboardingLabel: {
+    ...THEME.text.label,
+    marginTop: 40,
+    marginBottom: THEME.space.sm,
+  },
+  onboardingInput: {
+    ...THEME.text.body,
+    fontSize: 18,
+    backgroundColor: THEME.colors.sunken,
+    borderRadius: THEME.radius.md,
+    paddingHorizontal: THEME.space.lg,
+    paddingVertical: 15,
+    outlineStyle: 'none',
+  },
+  onboardingBtn: {
+    marginTop: THEME.space.md,
+    backgroundColor: THEME.colors.accent,
+    paddingVertical: 16,
+    borderRadius: THEME.radius.md,
+    alignItems: 'center',
+  },
+  onboardingBtnText: {
+    fontFamily: THEME.fonts.strong,
+    fontSize: 16,
+    color: THEME.colors.onAccent,
+  },
 });

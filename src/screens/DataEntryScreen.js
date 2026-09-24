@@ -1,208 +1,204 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
-import { calculateCashFlow } from '../logic/cashFlow';
-import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
+import { calculateCashFlow, PERIOD_OPTIONS } from '../logic/cashFlow';
+import { sortByDateDesc, groupByDay } from '../logic/helpers';
+import { formatMoney, formatDayLabel, monthName } from '../logic/format';
 import ScreenHeader from '../components/ScreenHeader';
+import Segmented from '../components/Segmented';
+import TransactionRow from '../components/TransactionRow';
+import EmptyState from '../components/EmptyState';
 
+const RECENT_LIMIT = 15;
 
-export default function DataEntryScreen({ transactions, onEdit, onDelete, userName, categories, incomeCategories, onGoToHistory }) {
+// "de septiembre", "de esta semana"...
+const periodCaption = (filter) => {
+  const now = new Date();
+  if (filter === 'week') return 'esta semana';
+  if (filter === 'month') return monthName(now.getMonth()).toLowerCase();
+  if (filter === 'year') return String(now.getFullYear());
+  return 'desde el principio';
+};
+
+export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
   const displayBalanceRef = useRef(0); // valor mostrado en cada momento (para no partir de uno viejo)
-  const balanceAnim = useRef(new Animated.Value(1)).current;
 
-  // Efecto para animar el balance cuando cambia
+  const cashFlow = calculateCashFlow(transactions, timeFilter);
+
+  // Contador animado del balance cuando cambia el periodo o los datos
   useEffect(() => {
-    const target = calculateCashFlow(transactions, timeFilter).netBalance;
-
-    // Animación de escala/opacidad
-    Animated.sequence([
-      Animated.timing(balanceAnim, { toValue: 0.8, duration: 100, useNativeDriver: Platform.OS !== 'web' }),
-      Animated.timing(balanceAnim, { toValue: 1, duration: 400, useNativeDriver: Platform.OS !== 'web' }),
-    ]).start();
-
-    // Contador animado desde el valor que se está mostrando ahora mismo
+    const target = cashFlow.netBalance;
     const start = displayBalanceRef.current;
     if (start === target) return;
 
-    const duration = 800;
+    const duration = 700;
     const startTime = Date.now();
     let frameId;
-
     const animate = () => {
       const progress = Math.min((Date.now() - startTime) / duration, 1);
-      // Easing out expo
-      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      const current = start + (target - start) * easeProgress;
-
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress); // ease-out expo
+      const current = start + (target - start) * eased;
       displayBalanceRef.current = current;
       setDisplayBalance(current);
-
       if (progress < 1) frameId = requestAnimationFrame(animate);
     };
-
     frameId = requestAnimationFrame(animate);
     // Si cambia el filtro a mitad o se sale de la pantalla, se cancela la animación
     return () => cancelAnimationFrame(frameId);
-  }, [timeFilter, transactions, balanceAnim]);
+  }, [cashFlow.netBalance]);
 
-  const cashFlow = calculateCashFlow(transactions, timeFilter);
   const firstName = (userName || '').trim().split(/\s+/)[0];
   // "jueves, 24 de septiembre"
   const todayLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // Reparto del gasto por categoría (lo que te toca pagar)
+  const catEntries = Object.entries(cashFlow.categoryTotalsNet)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, value]) => {
+      const cat = (categories || []).find(c => c.id === id);
+      return { id, value, color: cat ? cat.color : THEME.colors.inkFaint };
+    });
+  const spent = cashFlow.totalExpenseNet;
+
+  const recent = sortByDateDesc(cashFlow.transactions).slice(0, RECENT_LIMIT);
+  const groups = groupByDay(recent);
+  const hidden = '••••';
+
   return (
     <View style={styles.container}>
       <ScreenHeader
-        eyebrow={todayLabel}
+        eyebrow={todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}
         title={`Hola, ${firstName || 'de nuevo'}`}
         right={
           <TouchableOpacity
-            style={styles.topIconBtn}
+            style={styles.iconBtn}
             onPress={onGoToHistory}
             accessibilityLabel="Buscar movimientos"
           >
-            <Ionicons name="search-outline" size={20} color={THEME.colors.ink} />
+            <Ionicons name="search-outline" size={19} color={THEME.colors.ink} />
           </TouchableOpacity>
         }
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
-        {/* Giant Balance Hero */}
-        <View style={styles.balanceHero}>
-          <TouchableOpacity 
-            style={styles.eyeBtn} 
-            onPress={() => setShowBalance(!showBalance)}
-          >
-            <Ionicons 
-              name={showBalance ? "eye-outline" : "eye-off-outline"} 
-              size={18} 
-              color={THEME.colors.onAccent} 
-            />
-          </TouchableOpacity>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <Segmented options={PERIOD_OPTIONS} value={timeFilter} onChange={setTimeFilter} />
 
-          <Text style={styles.heroLabel}>
-            Balance {timeFilter === 'all' ? 'Total' : timeFilter === 'week' ? 'de la Semana' : timeFilter === 'month' ? 'del Mes' : 'del Año'}
-          </Text>
-          
-          {showBalance ? (
-            <Animated.Text style={[
-              styles.heroAmount,
-              { 
-                opacity: balanceAnim, 
-                transform: [{ scale: balanceAnim }],
-                color: THEME.colors.onAccent 
-              }
-            ]}>
-              {displayBalance >= 0 ? '+' : ''}{displayBalance.toFixed(2)}€
-            </Animated.Text>
-          ) : (
-            <View style={styles.blurredBalanceContainer}>
-              <Text style={styles.blurredBalanceText}>••••••</Text>
-            </View>
-          )}
-          
-          <View style={styles.heroStats}>
-            <View style={styles.heroStat}>
-              <Ionicons name="arrow-up-circle" size={20} color={THEME.colors.success} />
-              <View style={{marginLeft: 8}}>
-                <Text style={styles.heroStatLabel}>Ingresos</Text>
-                <Text style={styles.heroStatValue}>
-                  {showBalance ? `${cashFlow.totalIncome.toFixed(2)}€` : '•••€'}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.heroStat}>
-              <Ionicons name="arrow-down-circle" size={20} color={THEME.colors.error} />
-              <View style={{marginLeft: 8}}>
-                <Text style={styles.heroStatLabel}>Gastos</Text>
-                <Text style={styles.heroStatValue}>
-                  {showBalance ? `${cashFlow.totalExpenseNet.toFixed(2)}€` : '•••€'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Filters */}
-        <View style={styles.filterBar}>
-          {['all', 'week', 'month', 'year'].map(f => (
-            <TouchableOpacity 
-              key={f} 
-              style={[styles.filterChip, timeFilter === f && styles.filterChipActive]}
-              onPress={() => setTimeFilter(f)}
+        {/* Balance */}
+        <View style={styles.balance}>
+          <View style={styles.balanceLabelRow}>
+            <Text style={styles.balanceLabel}>
+              Balance · <Text style={styles.balanceLabelItalic}>{periodCaption(timeFilter)}</Text>
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowBalance(v => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showBalance ? 'Ocultar importes' : 'Mostrar importes'}
             >
-              <Text style={[styles.filterChipText, timeFilter === f && styles.filterChipTextActive]}>
-                {f === 'all' ? 'Todo' : f === 'week' ? 'Semana' : f === 'month' ? 'Mes' : 'Año'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Transactions list */}
-        <View style={styles.historyList}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Movimientos Recientes</Text>
-            <TouchableOpacity onPress={onGoToHistory}>
-              <Text style={styles.verTodoLink}>Ver Todo</Text>
+              <Ionicons name={showBalance ? 'eye-outline' : 'eye-off-outline'} size={18} color={THEME.colors.inkSoft} />
             </TouchableOpacity>
           </View>
-          {sortByDateDesc(cashFlow.transactions).slice(0, 15).map(tx => {
-            const catColor = getCategoryColor(tx.category, tx.type, categories, incomeCategories);
-            const catIcon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
-            const isIncome = tx.type === 'income';
-            return (
-              <View key={tx.id} style={styles.transactionCard}>
-                <View style={[styles.txIconContainer, { backgroundColor: catColor + '18' }]}>
-                  <Ionicons name={catIcon} size={22} color={catColor} />
-                </View>
 
-                <View style={styles.txInfo}>
-                  <Text style={styles.txTitle}>{tx.description}</Text>
-                  <View style={styles.txMeta}>
-                    <View style={[styles.catChip, { backgroundColor: catColor + '18' }]}>
-                      <Text style={[styles.catChipText, { color: catColor }]}>{isIncome ? 'Ingreso' : tx.category}</Text>
-                    </View>
-                    <Text style={styles.txDate}>{new Date(tx.date).toLocaleDateString()}</Text>
-                  </View>
-                </View>
+          <Text
+            style={[styles.balanceAmount, cashFlow.netBalance < 0 && { color: THEME.colors.danger }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {showBalance ? formatMoney(displayBalance, { sign: 'always' }) : `${hidden} €`}
+          </Text>
 
-                <View style={styles.txRight}>
-                  <Text style={[styles.txAmount, { color: isIncome ? THEME.colors.success : THEME.colors.error }]}>
-                    {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
-                  </Text>
-                  <View style={styles.txActions}>
-                    <TouchableOpacity onPress={() => onEdit(tx)} style={styles.txActionBtn}>
-                      <Ionicons name="pencil-outline" size={16} color={THEME.colors.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => onDelete(tx.id)} style={styles.txActionBtn}>
-                      <Ionicons name="trash-outline" size={16} color={THEME.colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
-          {transactions.length === 0 && (
-            <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={48} color={THEME.colors.border} />
-              <Text style={styles.emptyText}>No hay registros aún</Text>
+          <View style={styles.flowRow}>
+            <View style={styles.flowItem}>
+              <Text style={styles.flowLabel}>Ingresado</Text>
+              <Text style={[styles.flowValue, { color: THEME.colors.income }]}>
+                {showBalance ? formatMoney(cashFlow.totalIncome) : hidden}
+              </Text>
             </View>
+            <View style={styles.flowDivider} />
+            <View style={styles.flowItem}>
+              <Text style={styles.flowLabel}>Gastado</Text>
+              <Text style={styles.flowValue}>{showBalance ? formatMoney(spent) : hidden}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* En qué se va el dinero */}
+        {spent > 0 && catEntries.length > 0 && (
+          <View style={styles.split}>
+            <View style={styles.splitBar}>
+              {catEntries.map(e => (
+                <View key={e.id} style={{ flex: e.value, backgroundColor: e.color }} />
+              ))}
+            </View>
+            <View style={styles.splitLegend}>
+              {catEntries.slice(0, 3).map(e => (
+                <View key={e.id} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: e.color }]} />
+                  <Text style={styles.legendText} numberOfLines={1}>
+                    {e.id} <Text style={styles.legendPct}>{Math.round((e.value / spent) * 100)} %</Text>
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Movimientos recientes, agrupados por día */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recientes</Text>
+          {recent.length > 0 && (
+            <TouchableOpacity onPress={onGoToHistory} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.link}>Ver todos</Text>
+            </TouchableOpacity>
           )}
         </View>
+
+        {groups.map(group => (
+          <View key={group.key} style={styles.group}>
+            <Text style={styles.groupLabel}>{formatDayLabel(group.key)}</Text>
+            {group.items.map((tx, i) => (
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                categories={categories}
+                incomeCategories={incomeCategories}
+                onPress={onOpen}
+                isLast={i === group.items.length - 1}
+              />
+            ))}
+          </View>
+        ))}
+
+        {recent.length === 0 && (
+          transactions.length === 0 ? (
+            <EmptyState
+              title="Aún no hay nada apuntado"
+              message="Apunta tu primer gasto y aquí verás en qué se va tu dinero."
+              actionLabel="Añadir un gasto"
+              onAction={onAdd}
+            />
+          ) : (
+            <EmptyState
+              title="Nada en este periodo"
+              message="Prueba con otro periodo o añade un movimiento."
+            />
+          )
+        )}
       </ScrollView>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  topIconBtn: {
+  iconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -211,195 +207,112 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: THEME.colors.hairline,
   },
-  scrollContainer: {
-    paddingHorizontal: 20,
+  scroll: {
+    paddingHorizontal: THEME.layout.gutter,
     paddingBottom: 120,
   },
-  balanceHero: {
-    backgroundColor: THEME.colors.accent,
-    borderRadius: 35,
-    padding: 30,
-    marginTop: 10,
-    shadowColor: THEME.colors.accent,
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.3,
-    shadowRadius: 25,
-    elevation: 15,
+  balance: {
+    marginTop: THEME.space.xl,
   },
-  heroLabel: {
-    color: THEME.colors.onAccent,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 4,
-  },
-  eyeBtn: {
-    position: 'absolute',
-    top: 20,
-    right: 25,
-    padding: 8,
-    zIndex: 10,
-  },
-  blurredBalanceContainer: {
-    height: 72, // Match actual height roughly
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  blurredBalanceText: {
-    color: THEME.colors.onAccent,
-    fontSize: 48,
-    fontWeight: '900',
-    letterSpacing: 8,
-  },
-  heroAmount: {
-    color: THEME.colors.onAccent,
-    fontSize: 48,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginVertical: 15,
-  },
-  heroStats: {
+  balanceLabelRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(247, 243, 234, 0.2)',
   },
-  heroStat: {
+  balanceLabel: {
+    ...THEME.text.small,
+    fontFamily: THEME.fonts.medium,
+  },
+  balanceLabelItalic: {
+    fontFamily: THEME.fonts.displayItalic,
+    fontSize: THEME.type.body,
+    color: THEME.colors.ink,
+  },
+  balanceAmount: {
+    ...THEME.text.display,
+    fontSize: 52,
+    marginTop: THEME.space.sm,
+    fontVariant: ['tabular-nums'],
+  },
+  flowRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: THEME.space.lg,
+    paddingTop: THEME.space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: THEME.colors.hairline,
+  },
+  flowItem: {
     flex: 1,
   },
-  heroStatLabel: {
-    color: THEME.colors.onAccent,
-    fontSize: 11,
-    fontWeight: '600',
+  flowDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: THEME.colors.hairline,
+    marginHorizontal: THEME.space.lg,
   },
-  heroStatValue: {
-    color: THEME.colors.onAccent,
-    fontSize: 16,
-    fontWeight: '800',
+  flowLabel: {
+    ...THEME.text.small,
   },
-  filterBar: {
+  flowValue: {
+    ...THEME.text.amount,
+    fontSize: 17,
+    marginTop: 2,
+  },
+  split: {
+    marginTop: THEME.space.xl,
+  },
+  splitBar: {
     flexDirection: 'row',
-    marginTop: 30,
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 20,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    gap: 2,
   },
-  filterChip: {
-    flex: 1,
-    paddingVertical: 10,
+  splitLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: THEME.space.md,
+    columnGap: THEME.space.lg,
+    rowGap: THEME.space.xs,
+  },
+  legendItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 15,
+    maxWidth: '100%',
   },
-  filterChipActive: {
-    backgroundColor: THEME.colors.accent,
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
-  filterChipText: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
+  legendText: {
+    ...THEME.text.small,
+    color: THEME.colors.ink,
   },
-  filterChipTextActive: {
-    color: THEME.colors.onAccent,
-  },
-  historyList: {
-    marginTop: 35,
-  },
-  sectionTitle: {
-    color: THEME.colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '800',
+  legendPct: {
+    color: THEME.colors.inkSoft,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    alignItems: 'baseline',
+    marginTop: 40,
+    marginBottom: THEME.space.sm,
   },
-  verTodoLink: {
+  sectionTitle: {
+    ...THEME.text.heading,
+    fontSize: 22,
+  },
+  link: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.small,
     color: THEME.colors.accent,
-    fontSize: 14,
-    fontWeight: '700',
   },
-  transactionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.surface,
-    padding: 16,
-    borderRadius: 22,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  group: {
+    marginTop: THEME.space.lg,
   },
-  txIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+  groupLabel: {
+    ...THEME.text.label,
+    marginBottom: THEME.space.xs,
   },
-  txInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  txTitle: {
-    color: THEME.colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  txMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  catChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  catChipText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  txDate: {
-    color: THEME.colors.textSecondary,
-    fontSize: 11,
-  },
-  txRight: {
-    alignItems: 'flex-end',
-  },
-  txAmount: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  txActions: {
-    flexDirection: 'row',
-    marginTop: 6,
-  },
-  txActionBtn: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: THEME.colors.textSecondary,
-    fontSize: 14,
-    marginTop: 15,
-    fontWeight: '600',
-  }
 });

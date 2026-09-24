@@ -1,591 +1,361 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { THEME } from '../constants/theme';
-import { calculateCashFlow } from '../logic/cashFlow';
+import {
+  calculateCashFlow, getPeriodRange, expenseBetween, getPeriodBuckets, PERIOD_OPTIONS,
+} from '../logic/cashFlow';
+import { formatMoney, monthName } from '../logic/format';
 import ScreenHeader from '../components/ScreenHeader';
+import Segmented from '../components/Segmented';
+import EmptyState from '../components/EmptyState';
 
-const TOP = THEME.layout.screenTop;
-
-// ─── Animated horizontal bar ─────────────────────────────────────────────────
-function HorizBar({ color, pct, delay = 0 }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    anim.setValue(0);
-    Animated.timing(anim, {
-      toValue: pct,
-      duration: 900,
-      delay,
-      useNativeDriver: false,
-    }).start();
-  }, [pct, delay, anim]);
-
-  const widthInterp = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', `${Math.max(pct * 100, 0)}%`],
-  });
-
-  return (
-    <View style={horizStyles.track}>
-      <Animated.View style={[horizStyles.fill, { width: widthInterp, backgroundColor: color }]} />
-    </View>
-  );
-}
-
-const horizStyles = StyleSheet.create({
-  track: {
-    flex: 1,
-    height: 10,
-    backgroundColor: THEME.colors.sunken,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    borderRadius: 6,
-  },
-});
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ icon, label, value, color, sub }) {
-  return (
-    <View style={kpiStyles.card}>
-      <View style={[kpiStyles.iconWrap, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-      <Text style={kpiStyles.label}>{label}</Text>
-      <Text style={[kpiStyles.value, { color }]}>{value}</Text>
-      {sub ? <Text style={kpiStyles.sub}>{sub}</Text> : null}
-    </View>
-  );
-}
-
-const kpiStyles = StyleSheet.create({
-  card: {
-    backgroundColor: THEME.colors.elevated,
-    borderRadius: 18,
-    padding: 16,
-    flex: 1,
-    borderWidth: 1,
-    borderColor: THEME.colors.hairline,
-    alignItems: 'flex-start',
-    minWidth: 130,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  sub: {
-    fontSize: 11,
-    color: THEME.colors.textSecondary,
-    marginTop: 2,
-  },
-});
-
-// ─── Filter Pill ──────────────────────────────────────────────────────────────
-function FilterPill({ label, active, onPress }) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[filterStyles.pill, active && filterStyles.pillActive]}
-    >
-      <Text style={[filterStyles.label, active && filterStyles.labelActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const filterStyles = StyleSheet.create({
-  pill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: THEME.colors.hairline,
-  },
-  pillActive: {
-    backgroundColor: THEME.colors.accent,
-    borderColor: THEME.colors.accent,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-  },
-  labelActive: {
-    color: THEME.colors.onAccent,
-  },
-});
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-const TIME_FILTERS = [
-  { key: 'week', label: 'Semana' },
-  { key: 'month', label: 'Mes' },
-  { key: 'year', label: 'Año' },
-  { key: 'all', label: 'Todo' },
+const MODES = [
+  { key: 'net', label: 'Mi parte' },
+  { key: 'gross', label: 'Total pagado' },
 ];
 
+const periodName = (filter, offset, now = new Date()) => {
+  if (filter === 'week') return offset === 0 ? 'esta semana' : 'la semana pasada';
+  if (filter === 'month') return monthName(new Date(now.getFullYear(), now.getMonth() + offset, 1).getMonth()).toLowerCase();
+  if (filter === 'year') return String(now.getFullYear() + offset);
+  return 'desde el principio';
+};
+
 export default function ChartsScreen({ transactions, categories }) {
-  const [netMode, setNetMode] = useState(true); // true = neto, false = bruto
+  const [mode, setMode] = useState('net');
   const [timeFilter, setTimeFilter] = useState('month');
+  const netMode = mode === 'net';
+  const txs = transactions || [];
 
-  const cashFlow = calculateCashFlow(transactions || [], timeFilter);
-
-  const displayExpense = netMode ? cashFlow.totalExpenseNet : cashFlow.totalExpense;
-  const displayCategories = netMode ? cashFlow.categoryTotalsNet : cashFlow.categoryTotals;
-
+  const cashFlow = calculateCashFlow(txs, timeFilter);
+  const spent = netMode ? cashFlow.totalExpenseNet : cashFlow.totalExpense;
+  const byCategory = netMode ? cashFlow.categoryTotalsNet : cashFlow.categoryTotals;
+  const balance = cashFlow.totalIncome - spent;
   // Puede ser negativo: si gastas más de lo que ingresas, se muestra el déficit
-  const savingsRate =
-    cashFlow.totalIncome > 0
-      ? ((cashFlow.totalIncome - displayExpense) / cashFlow.totalIncome) * 100
-      : 0;
-  const savingsColor = savingsRate < 0 ? THEME.colors.error : THEME.colors.success;
+  const savingsRate = cashFlow.totalIncome > 0 ? (balance / cashFlow.totalIncome) * 100 : null;
+  const txCount = cashFlow.transactions.length;
 
-  const txCount = (transactions || []).filter(t => {
-    if (timeFilter === 'all') return true;
-    if (!t.date) return true;
-    const now = new Date();
-    const d = new Date(t.date);
-    if (timeFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    if (timeFilter === 'year') return d.getFullYear() === now.getFullYear();
-    if (timeFilter === 'week') {
-      const day = now.getDay();
-      const diff = now.getDate() - (day === 0 ? 6 : day - 1);
-      const monday = new Date(now); monday.setDate(diff); monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23, 59, 59, 999);
-      return d >= monday && d <= sunday;
-    }
-    return true;
-  }).length;
+  // Comparación con el periodo anterior
+  const prevRange = getPeriodRange(timeFilter, -1);
+  const prevSpent = prevRange ? expenseBetween(txs, prevRange.start, prevRange.end, netMode) : 0;
+  let comparison = null;
+  if (prevRange && prevSpent > 0) {
+    const diff = ((spent - prevSpent) / prevSpent) * 100;
+    const prevName = periodName(timeFilter, -1);
+    if (Math.abs(diff) < 1) comparison = { text: `Igual que ${prevName}`, color: THEME.colors.inkSoft };
+    else if (diff < 0) comparison = { text: `${Math.round(-diff)} % menos que ${prevName}`, color: THEME.colors.income };
+    else comparison = { text: `${Math.round(diff)} % más que ${prevName}`, color: THEME.colors.danger };
+  }
 
   // Todas las categorías con gasto, incluidas las que el usuario ya borró
   // (sus movimientos siguen existiendo y deben contar en el reparto)
-  const catEntries = Object.entries(displayCategories)
+  const catEntries = Object.entries(byCategory)
+    .filter(([, val]) => val > 0)
     .map(([id, val]) => {
       const known = (categories || []).find(c => c.id === id);
-      const cat = known || { id, label: `${id} (eliminada)`, color: THEME.colors.textSecondary, icon: 'help-circle-outline' };
-      return { cat, val };
+      return {
+        id,
+        label: known ? id : `${id} (eliminada)`,
+        color: known ? known.color : THEME.colors.inkFaint,
+        val,
+      };
     })
-    .filter(e => e.val > 0)
     .sort((a, b) => b.val - a.val);
 
-  const topCat = catEntries[0];
+  // Barras del periodo
+  const buckets = getPeriodBuckets(timeFilter).map(b => ({ ...b, value: expenseBetween(txs, b.start, b.end, netMode) }));
+  const maxBucket = Math.max(0, ...buckets.map(b => b.value));
+  const nowTime = Date.now();
+  const showLabel = (i) => timeFilter !== 'month' || i === 0 || (i + 1) % 5 === 0;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <ScreenHeader
-        title="Análisis"
-        right={
-          // Net / Bruto toggle
-          <TouchableOpacity
-            style={styles.modeToggle}
-            onPress={() => setNetMode(p => !p)}
-          >
-            <Ionicons
-              name={netMode ? 'git-network-outline' : 'cash-outline'}
-              size={14}
-              color={THEME.colors.accent}
-            />
-            <Text style={styles.modeToggleText}>{netMode ? 'Neto' : 'Bruto'}</Text>
-          </TouchableOpacity>
-        }
-      />
-
-      {/* Time filter row */}
-      <View style={styles.filterRow}>
-        {TIME_FILTERS.map(f => (
-          <FilterPill
-            key={f.key}
-            label={f.label}
-            active={timeFilter === f.key}
-            onPress={() => setTimeFilter(f.key)}
-          />
-        ))}
-      </View>
+      <ScreenHeader title="Análisis" />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <Segmented options={PERIOD_OPTIONS} value={timeFilter} onChange={setTimeFilter} />
 
-        {/* ── KPI row ── */}
-        <View style={styles.kpiRow}>
-          <KpiCard
-            icon="trending-up-outline"
-            label="Ingresos"
-            value={`${cashFlow.totalIncome.toFixed(0)}€`}
-            color={THEME.colors.success}
+        {txCount === 0 ? (
+          <EmptyState
+            title="Sin datos en este periodo"
+            message="Cuando apuntes movimientos, aquí verás en qué se va tu dinero."
           />
-          <View style={{ width: 12 }} />
-          <KpiCard
-            icon="trending-down-outline"
-            label="Gastos"
-            value={`${displayExpense.toFixed(0)}€`}
-            color={THEME.colors.error}
-            sub={cashFlow.totalRefunds > 0 ? `Reembolsos: ${cashFlow.totalRefunds.toFixed(0)}€` : null}
-          />
-        </View>
-
-        <View style={[styles.kpiRow, { marginTop: 12 }]}>
-          <KpiCard
-            icon="wallet-outline"
-            label="Balance"
-            value={`${cashFlow.netBalance.toFixed(0)}€`}
-            color={cashFlow.netBalance >= 0 ? THEME.colors.success : THEME.colors.error}
-          />
-          <View style={{ width: 12 }} />
-          <KpiCard
-            icon="save-outline"
-            label="Ahorro"
-            value={`${savingsRate.toFixed(0)}%`}
-            color={savingsColor}
-            sub={`${txCount} movimientos`}
-          />
-        </View>
-
-        {/* ── Balance visual bar ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ingresos vs Gastos</Text>
-          <View style={styles.balanceVisual}>
-            {/* Income bar */}
-            <View style={styles.bvRow}>
-              <View style={styles.bvLabelWrap}>
-                <View style={[styles.bvDot, { backgroundColor: THEME.colors.success }]} />
-                <Text style={styles.bvLabel}>Ingresos</Text>
-              </View>
-              <HorizBar
-                color={THEME.colors.success}
-                pct={cashFlow.totalIncome > 0 ? 1 : 0}
-                delay={0}
-              />
-              <Text style={styles.bvVal}>{cashFlow.totalIncome.toFixed(0)}€</Text>
+        ) : (
+          <>
+            {/* Cifra principal */}
+            <View style={styles.hero}>
+              <Text style={styles.heroLabel}>
+                Gastado · <Text style={styles.heroLabelItalic}>{periodName(timeFilter, 0)}</Text>
+              </Text>
+              <Text style={styles.heroAmount} numberOfLines={1} adjustsFontSizeToFit>{formatMoney(spent)}</Text>
+              {comparison && <Text style={[styles.comparison, { color: comparison.color }]}>{comparison.text}</Text>}
             </View>
-            {/* Expense bar */}
-            <View style={[styles.bvRow, { marginTop: 14 }]}>
-              <View style={styles.bvLabelWrap}>
-                <View style={[styles.bvDot, { backgroundColor: THEME.colors.error }]} />
-                <Text style={styles.bvLabel}>Gastos</Text>
+
+            {/* Tres datos */}
+            <View style={styles.stats}>
+              <View style={styles.stat}>
+                <Text style={styles.statLabel}>Ingresado</Text>
+                <Text style={[styles.statValue, { color: THEME.colors.income }]}>{formatMoney(cashFlow.totalIncome, { decimals: 0 })}</Text>
               </View>
-              <HorizBar
-                color={THEME.colors.error}
-                pct={cashFlow.totalIncome > 0 ? Math.min(1, displayExpense / cashFlow.totalIncome) : (displayExpense > 0 ? 1 : 0)}
-                delay={150}
-              />
-              <Text style={styles.bvVal}>{displayExpense.toFixed(0)}€</Text>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <Text style={styles.statLabel}>Balance</Text>
+                <Text style={[styles.statValue, balance < 0 && { color: THEME.colors.danger }]}>
+                  {formatMoney(balance, { sign: 'always', decimals: 0 })}
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <Text style={styles.statLabel}>{savingsRate !== null && savingsRate < 0 ? 'Déficit' : 'Ahorro'}</Text>
+                <Text style={[styles.statValue, savingsRate !== null && savingsRate < 0 && { color: THEME.colors.danger }]}>
+                  {savingsRate === null ? '—' : `${Math.round(savingsRate)} %`}
+                </Text>
+              </View>
             </View>
-            {/* Savings bar */}
-            {cashFlow.totalIncome > 0 && (
-              <View style={[styles.bvRow, { marginTop: 14 }]}>
-                <View style={styles.bvLabelWrap}>
-                  <View style={[styles.bvDot, { backgroundColor: savingsColor }]} />
-                  <Text style={styles.bvLabel}>{savingsRate < 0 ? 'Déficit' : 'Ahorro'}</Text>
-                </View>
-                <HorizBar
-                  color={savingsColor}
-                  pct={Math.min(1, Math.abs(savingsRate) / 100)}
-                  delay={300}
-                />
-                <Text style={styles.bvVal}>{(cashFlow.totalIncome - displayExpense).toFixed(0)}€</Text>
+
+            {/* Mi parte / Total pagado: solo tiene sentido si hay gastos compartidos */}
+            {cashFlow.totalRefunds > 0 && (
+              <View style={styles.modeBox}>
+                <Segmented options={MODES} value={mode} onChange={setMode} />
+                <Text style={styles.modeNote}>
+                  {netMode
+                    ? `Descuenta los ${formatMoney(cashFlow.totalRefunds)} que te devuelven de gastos compartidos.`
+                    : 'Cuenta todo lo que ha salido de tu cuenta, aunque luego te lo devuelvan.'}
+                </Text>
               </View>
             )}
-          </View>
-        </View>
 
-        {/* ── Category breakdown ── */}
-        {displayExpense > 0 && catEntries.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Por categoría</Text>
-              {topCat && (
-                <View style={[styles.topBadge, { backgroundColor: topCat.cat.color + '20' }]}>
-                  <Ionicons name={topCat.cat.icon || 'flame'} size={12} color={topCat.cat.color} />
-                  <Text style={[styles.topBadgeText, { color: topCat.cat.color }]}>
-                    Top: {topCat.cat.label || topCat.cat.id}
-                  </Text>
+            {/* Por categoría */}
+            {spent > 0 && catEntries.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Por categoría</Text>
+                <View style={styles.stackedBar}>
+                  {catEntries.map(e => <View key={e.id} style={{ flex: e.val, backgroundColor: e.color }} />)}
                 </View>
-              )}
-            </View>
+                {catEntries.map((e, i) => {
+                  const pct = (e.val / spent) * 100;
+                  return (
+                    <View key={e.id} style={[styles.catRow, i < catEntries.length - 1 && styles.catDivider]}>
+                      <View style={[styles.catDot, { backgroundColor: e.color }]} />
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.catTop}>
+                          <Text style={styles.catName} numberOfLines={1}>{e.label}</Text>
+                          <Text style={styles.catAmount}>{formatMoney(e.val)}</Text>
+                        </View>
+                        <View style={styles.catBarRow}>
+                          <View style={styles.catTrack}>
+                            <View style={[styles.catFill, { width: `${Math.max(pct, 1)}%`, backgroundColor: e.color }]} />
+                          </View>
+                          <Text style={styles.catPct}>{Math.round(pct)} %</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
-            {catEntries.map(({ cat, val }, idx) => {
-              const pct = val / displayExpense;
-              const pctLabel = (pct * 100).toFixed(0);
-              return (
-                <View key={cat.id} style={styles.catRow}>
-                  {/* Icon */}
-                  <View style={[styles.catIcon, { backgroundColor: cat.color + '18' }]}>
-                    <Ionicons name={cat.icon || 'cart-outline'} size={18} color={cat.color} />
-                  </View>
-                  {/* Bar + info */}
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <View style={styles.catTopRow}>
-                      <Text style={styles.catName}>{cat.label || cat.id}</Text>
-                      <Text style={[styles.catAmount, { color: cat.color }]}>{val.toFixed(2)}€</Text>
-                    </View>
-                    <View style={styles.catBarRow}>
-                      <HorizBar color={cat.color} pct={pct} delay={idx * 80} />
-                      <Text style={styles.catPct}>{pctLabel}%</Text>
-                    </View>
-                  </View>
+            {/* Día a día / mes a mes */}
+            {maxBucket > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {timeFilter === 'week' || timeFilter === 'month' ? 'Día a día' : 'Mes a mes'}
+                </Text>
+                <View style={styles.bars}>
+                  {buckets.map((b, i) => {
+                    const isCurrent = nowTime >= b.start.getTime() && nowTime <= b.end.getTime();
+                    const h = b.value > 0 ? Math.max(3, (b.value / maxBucket) * 100) : 0;
+                    return (
+                      <View key={b.start.toISOString()} style={styles.barCol}>
+                        <View style={styles.barArea}>
+                          {b.value > 0 && (
+                            <View style={[
+                              styles.bar,
+                              { height: `${h}%`, backgroundColor: isCurrent ? THEME.colors.accent : THEME.inkAlpha(0.22) },
+                            ]} />
+                          )}
+                        </View>
+                        <Text style={[styles.barLabel, isCurrent && { color: THEME.colors.ink }]}>
+                          {showLabel(i) ? b.label : ''}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
-              );
-            })}
-          </View>
+                <Text style={styles.barsNote}>
+                  Máximo: {formatMoney(maxBucket)} {timeFilter === 'week' || timeFilter === 'month' ? 'en un día' : 'en un mes'}
+                </Text>
+              </View>
+            )}
+          </>
         )}
-
-        {/* ── Donut visual (css ring with stacked pills) ── */}
-        {displayExpense > 0 && catEntries.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Distribución</Text>
-            {/* Stacked pill bar */}
-            <View style={styles.stackedBar}>
-              {catEntries.map(({ cat, val }) => {
-                const pct = (val / displayExpense) * 100;
-                return (
-                  <View
-                    key={cat.id}
-                    style={{ flex: pct, backgroundColor: cat.color, minWidth: 4 }}
-                  />
-                );
-              })}
-            </View>
-            {/* Legend below */}
-            <View style={styles.distLegend}>
-              {catEntries.map(({ cat, val }) => {
-                const pct = ((val / displayExpense) * 100).toFixed(0);
-                return (
-                  <View key={cat.id} style={styles.distLegendItem}>
-                    <View style={[styles.distDot, { backgroundColor: cat.color }]} />
-                    <View>
-                      <Text style={styles.distName}>{cat.label || cat.id}</Text>
-                      <Text style={[styles.distPct, { color: cat.color }]}>{pct}%</Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* ── Empty state ── */}
-        {txCount === 0 && (
-          <View style={styles.emptyWrap}>
-            <Ionicons name="bar-chart-outline" size={64} color={THEME.colors.textSecondary} style={{ opacity: 0.3 }} />
-            <Text style={styles.emptyTitle}>Sin datos en este período</Text>
-            <Text style={styles.emptySub}>Añade movimientos para ver el análisis</Text>
-          </View>
-        )}
-
       </ScrollView>
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  modeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: THEME.colors.accent + '50',
-    backgroundColor: THEME.colors.accent + '10',
-  },
-  modeToggleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: THEME.colors.accent,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
   scroll: {
-    paddingHorizontal: 20,
+    paddingHorizontal: THEME.layout.gutter,
     paddingBottom: 120,
   },
-  kpiRow: {
+  hero: {
+    marginTop: THEME.space.xl,
+  },
+  heroLabel: {
+    ...THEME.text.small,
+    fontFamily: THEME.fonts.medium,
+  },
+  heroLabelItalic: {
+    fontFamily: THEME.fonts.displayItalic,
+    fontSize: THEME.type.body,
+    color: THEME.colors.ink,
+  },
+  heroAmount: {
+    ...THEME.text.display,
+    fontSize: 52,
+    marginTop: THEME.space.sm,
+    fontVariant: ['tabular-nums'],
+  },
+  comparison: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.small,
+    marginTop: THEME.space.xs,
+  },
+  stats: {
     flexDirection: 'row',
+    marginTop: THEME.space.lg,
+    paddingVertical: THEME.space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: THEME.colors.hairline,
+  },
+  stat: {
+    flex: 1,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: THEME.colors.hairline,
+    marginHorizontal: THEME.space.md,
+  },
+  statLabel: {
+    ...THEME.text.small,
+  },
+  statValue: {
+    ...THEME.text.amount,
+    fontSize: 17,
+    marginTop: 2,
+  },
+  modeBox: {
+    marginTop: THEME.space.lg,
+  },
+  modeNote: {
+    ...THEME.text.small,
+    marginTop: THEME.space.sm,
+    lineHeight: 18,
   },
   section: {
-    backgroundColor: THEME.colors.elevated,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: THEME.colors.hairline,
-    padding: 20,
-    marginTop: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    marginTop: 36,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: THEME.colors.textPrimary,
-    marginBottom: 20,
+    ...THEME.text.heading,
+    fontSize: 22,
+    marginBottom: THEME.space.lg,
   },
-  topBadge: {
+  stackedBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+    gap: 2,
+    marginBottom: THEME.space.sm,
   },
-  topBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  // Balance visual
-  balanceVisual: {
-    gap: 4,
-  },
-  bvRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  bvLabelWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    width: 72,
-  },
-  bvDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  bvLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: THEME.colors.textSecondary,
-  },
-  bvVal: {
-    width: 50,
-    textAlign: 'right',
-    fontSize: 13,
-    fontWeight: '800',
-    color: THEME.colors.textPrimary,
-  },
-  // Category
   catRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
+    alignItems: 'flex-start',
+    paddingVertical: THEME.space.md,
   },
-  catIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
+  catDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: THEME.colors.hairline,
   },
-  catTopRow: {
+  catDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 5,
+    marginRight: THEME.space.md,
+  },
+  catTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
   },
   catName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: THEME.colors.textPrimary,
+    ...THEME.text.bodyMedium,
+    flex: 1,
+    marginRight: THEME.space.sm,
   },
   catAmount: {
-    fontSize: 14,
-    fontWeight: '800',
+    ...THEME.text.amount,
   },
   catBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginTop: THEME.space.sm,
+  },
+  catTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: THEME.colors.sunken,
+    overflow: 'hidden',
+  },
+  catFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   catPct: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-    width: 32,
+    ...THEME.text.small,
+    width: 44,
     textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
-  // Stacked bar
-  stackedBar: {
+  bars: {
     flexDirection: 'row',
-    height: 16,
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 20,
+    alignItems: 'flex-end',
+    height: 140,
+    gap: 2,
   },
-  distLegend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-  },
-  distLegendItem: {
-    flexDirection: 'row',
+  barCol: {
+    flex: 1,
+    height: '100%',
     alignItems: 'center',
-    gap: 8,
-    minWidth: 90,
   },
-  distDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  distName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: THEME.colors.textPrimary,
-  },
-  distPct: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  // Empty
-  emptyWrap: {
+  barArea: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: TOP,
-    gap: 10,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: THEME.colors.textSecondary,
+  bar: {
+    width: '70%',
+    maxWidth: 22,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
   },
-  emptySub: {
-    fontSize: 13,
-    color: THEME.colors.textSecondary,
-    opacity: 0.6,
+  barLabel: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: 10,
+    color: THEME.colors.inkFaint,
+    marginTop: 6,
+    height: 14,
+  },
+  barsNote: {
+    ...THEME.text.small,
+    marginTop: THEME.space.md,
   },
 });

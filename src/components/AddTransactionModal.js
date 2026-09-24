@@ -1,25 +1,37 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, View, Text, TextInput, TouchableOpacity, 
-  Modal, Platform, KeyboardAvoidingView, ScrollView 
+import React, { useState, useRef } from 'react';
+import {
+  StyleSheet, View, Text, TextInput, TouchableOpacity,
+  Platform, ScrollView, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { THEME } from '../constants/theme';
 import { toLocalDateKey, fromLocalDateKey, isValidDate } from '../logic/dates';
 import { showAlert } from '../logic/dialogs';
+import { formatMoney } from '../logic/format';
+import Sheet from './Sheet';
+import Segmented from './Segmented';
+
+const TYPES = [
+  { key: 'expense', label: 'Gasto' },
+  { key: 'income', label: 'Ingreso' },
+];
+
+// Solo números con un separador decimal (punto o coma)
+const isAmountText = (val) => val === '' || ((val.split(/[.,]/).length - 1) <= 1 && /^\d*[.,]?\d*$/.test(val));
 
 // defaultDate: fecha con la que se abre un movimiento NUEVO (p. ej. el día
 // elegido en el calendario). Si no se pasa, se usa hoy.
 export default function AddTransactionModal({ visible, onClose, onSave, initialData, defaultDate, categories, incomeCategories }) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [type, setType] = useState('expense'); 
+  const [type, setType] = useState('expense');
   const [category, setCategory] = useState('Comida');
   const [isShared, setIsShared] = useState(false);
   const [myPart, setMyPart] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const amountRef = useRef(null);
 
   React.useEffect(() => {
     if (initialData) {
@@ -40,46 +52,57 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, visible, defaultDate]);
 
+  // Al abrir, el cursor va directo al importe
+  React.useEffect(() => {
+    if (!visible) return;
+    const id = setTimeout(() => amountRef.current && amountRef.current.focus(), 350);
+    return () => clearTimeout(id);
+  }, [visible]);
+
   // Estado del selector de fecha
   const selectedKey = toLocalDateKey(date);
   const todayKey = toLocalDateKey(new Date());
   const yesterdayKey = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDateKey(d); })();
   const dateMode = selectedKey === todayKey ? 'today' : selectedKey === yesterdayKey ? 'yesterday' : 'other';
   const otherDateLabel = dateMode === 'other' && isValidDate(date)
-    ? date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
-    : 'Otra fecha';
-  const fullDateLabel = isValidDate(date)
-    ? date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    : '';
+    ? date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '')
+    : 'Otro día';
+
+  const changeType = (next) => {
+    setType(next);
+    setCategory(next === 'income' ? 'Ingreso' : (categories[0]?.id || ''));
+  };
 
   const handleSave = () => {
     const normalizedAmount = amount.replace(',', '.');
-    if (!description || !normalizedAmount || isNaN(parseFloat(normalizedAmount))) {
-      showAlert('Faltan datos', 'Por favor rellena descripción y un importe válido');
+    if (!normalizedAmount || isNaN(parseFloat(normalizedAmount))) {
+      showAlert('Falta el importe', 'Escribe cuánto ha sido.');
       return;
     }
 
     const totalAmount = parseFloat(normalizedAmount);
     if (totalAmount <= 0) {
-      showAlert('Importe no válido', 'El importe tiene que ser mayor que 0');
+      showAlert('Importe no válido', 'El importe tiene que ser mayor que 0.');
       return;
     }
     const myPartValue = (type === 'expense' && isShared) ? parseFloat(myPart.replace(',', '.') || normalizedAmount) : totalAmount;
     if (isNaN(myPartValue) || myPartValue > totalAmount) {
-      showAlert('Tu parte no es válida', 'Tu parte no puede ser mayor que el importe total');
+      showAlert('Tu parte no es válida', 'Tu parte no puede ser mayor que el importe total.');
       return;
     }
     const refund = (type === 'expense' && isShared) ? Math.max(0, totalAmount - myPartValue) : 0;
+    const finalCategory = type === 'income' ? 'Ingreso' : category;
 
+    // Mismo formato de siempre; si no hay nota, se usa el nombre de la categoría
     const newTx = {
       id: initialData ? initialData.id : Date.now().toString(),
-      description,
+      description: description.trim() || finalCategory,
       amount: totalAmount,
       isShared: type === 'expense' ? isShared : false,
       myPart: myPartValue,
       refundAmount: refund,
       type,
-      category: type === 'income' ? 'Ingreso' : category,
+      category: finalCategory,
       date: (isValidDate(date) ? date : new Date()).toISOString(),
     };
 
@@ -96,311 +119,253 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
 
+  const title = initialData ? 'Editar movimiento' : type === 'income' ? 'Nuevo ingreso' : 'Nuevo gasto';
+  const parsedAmount = parseFloat((amount || '0').replace(',', '.')) || 0;
+  const parsedPart = parseFloat((myPart || '').replace(',', '.'));
+  const theyOwe = isShared && !isNaN(parsedPart) && parsedPart <= parsedAmount ? parsedAmount - parsedPart : 0;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-        style={styles.modalOverlay}
-      >
-        {/* Tap outside to close */}
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        <View style={styles.modalContent}>
-          {/* Drag handle */}
-          <View style={styles.handle} />
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{initialData ? 'Editar Registro' : 'Nuevo Registro'}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color={THEME.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+    <Sheet visible={visible} onClose={onClose}>
+      <View style={styles.header}>
+        <Text style={styles.title}>{title}</Text>
+        <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Cerrar">
+          <Ionicons name="close" size={22} color={THEME.colors.inkSoft} />
+        </TouchableOpacity>
+      </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Type Selector */}
-            <View style={styles.typeRow}>
-              <TouchableOpacity 
-                style={[styles.typeBtn, type === 'income' && styles.typeBtnActiveIncome]}
-                onPress={() => { setType('income'); setCategory('Ingreso'); }}
-              >
-                <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>Ingreso</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.typeBtn, type === 'expense' && styles.typeBtnActiveExpense]}
-                onPress={() => { setType('expense'); setCategory(categories[0]?.id || ''); }}
-              >
-                <Text style={[styles.typeBtnText, type === 'expense' && styles.typeBtnTextActive]}>Gasto</Text>
-              </TouchableOpacity>
-            </View>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <Segmented options={TYPES} value={type} onChange={changeType} />
 
-            <TextInput 
-              style={styles.input}
-              placeholder={type === 'income' ? "¿De dónde viene este dinero?" : "¿En qué lo has gastado?"}
-              placeholderTextColor={THEME.colors.textTertiary}
-              value={description}
-              onChangeText={setDescription}
-            />
+        {/* Importe */}
+        <View style={styles.amountWrap}>
+          <TextInput
+            ref={amountRef}
+            // El ancho sigue a las cifras para que el "€" quede pegado al número
+            style={[styles.amountInput, { width: (amount || '0').length * 33 + 14 }, type === 'income' && { color: THEME.colors.income }]}
+            placeholder="0"
+            placeholderTextColor={THEME.colors.inkFaint}
+            keyboardType="decimal-pad"
+            value={amount}
+            onChangeText={(val) => { if (isAmountText(val)) setAmount(val); }}
+            accessibilityLabel="Importe"
+          />
+          <Text style={[styles.amountCurrency, type === 'income' && { color: THEME.colors.income }]}>€</Text>
+        </View>
 
-            <View style={styles.amountGroup}>
-              <TextInput 
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                placeholder="0.00"
-                placeholderTextColor={THEME.colors.textTertiary}
-                keyboardType="decimal-pad"
-                value={amount}
-                onChangeText={(val) => {
-                  // Permitir números, puntos y comas
-                  // Solo permitir un separador (punto o coma)
-                  if ((val.split(/[.,]/).length - 1) > 1) return;
-                  // Regex que permite números y opcionalmente un punto o coma al final o en medio
-                  if (val !== '' && !/^\d*[.,]?\d*$/.test(val)) return;
-                  setAmount(val);
+        {/* Categoría */}
+        {type === 'expense' && (
+          <>
+            <Text style={styles.label}>Categoría</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipRow}
+              keyboardShouldPersistTaps="handled"
+            >
+              {(categories || []).map(cat => {
+                const active = category === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.chip, active && { backgroundColor: cat.color, borderColor: cat.color }]}
+                    onPress={() => setCategory(cat.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name={cat.icon || 'cart-outline'} size={15} color={active ? THEME.colors.onAccent : cat.color} />
+                    <Text style={[styles.chipText, active && { color: THEME.colors.onAccent }]}>{cat.id}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
+
+        {/* Nota */}
+        <Text style={styles.label}>Nota</Text>
+        <TextInput
+          style={styles.input}
+          placeholder={type === 'income' ? 'Nómina, Bizum de Ana…' : 'Cena con amigos, gasolina…'}
+          placeholderTextColor={THEME.colors.inkFaint}
+          value={description}
+          onChangeText={setDescription}
+          returnKeyType="done"
+        />
+
+        {/* Fecha: accesos rápidos Hoy / Ayer y "Otro día" que abre el
+            calendario del sistema directamente, sin pasos intermedios */}
+        <Text style={styles.label}>Fecha</Text>
+        <View style={styles.dateRow}>
+          <TouchableOpacity
+            style={[styles.dateChip, dateMode === 'today' && styles.dateChipActive]}
+            onPress={() => setDate(new Date())}
+          >
+            <Text style={[styles.dateChipText, dateMode === 'today' && styles.dateChipTextActive]}>Hoy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.dateChip, dateMode === 'yesterday' && styles.dateChipActive]}
+            onPress={() => setDate(fromLocalDateKey(yesterdayKey))}
+          >
+            <Text style={[styles.dateChipText, dateMode === 'yesterday' && styles.dateChipTextActive]}>Ayer</Text>
+          </TouchableOpacity>
+
+          {Platform.OS === 'web' ? (
+            // En web, un <input type="date"> invisible cubre el botón: al
+            // tocarlo se abre el calendario del navegador a la primera
+            <View style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}>
+              <Ionicons name="calendar-outline" size={15} color={dateMode === 'other' ? THEME.colors.onAccent : THEME.colors.inkSoft} />
+              <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
+              <input
+                type="date"
+                aria-label="Elegir otra fecha"
+                value={selectedKey || ''}
+                onClick={(e) => { try { e.currentTarget.showPicker && e.currentTarget.showPicker(); } catch (_err) { /* navegador sin showPicker: el toque ya abre el calendario */ } }}
+                onChange={(e) => {
+                  // Si el campo se vacía o es inválido, se mantiene la fecha anterior
+                  const picked = fromLocalDateKey(e.target.value);
+                  if (picked) setDate(picked);
+                }}
+                style={{
+                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                  opacity: 0, cursor: 'pointer', border: 'none', padding: 0, margin: 0,
                 }}
               />
-              {type === 'expense' && (
-                <TouchableOpacity 
-                  style={[styles.sharedBtn, isShared && styles.sharedBtnActive]}
-                  onPress={() => setIsShared(!isShared)}
-                >
-                  <Ionicons name="people" size={20} color={isShared ? THEME.colors.onAccent : THEME.colors.accent} />
-                </TouchableOpacity>
-              )}
             </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={15} color={dateMode === 'other' ? THEME.colors.onAccent : THEME.colors.inkSoft} />
+              <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
+        {showDatePicker && Platform.OS !== 'web' && (
+          <DateTimePicker
+            value={isValidDate(date) ? date : new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            themeVariant="light"
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(false);
+              if (event?.type !== 'dismissed' && selectedDate) setDate(selectedDate);
+            }}
+          />
+        )}
+
+        {/* Gasto compartido */}
+        {type === 'expense' && (
+          <View style={styles.sharedBox}>
+            <View style={styles.sharedRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sharedTitle}>Gasto compartido</Text>
+                <Text style={styles.sharedSub}>Lo pagaste tú, pero solo cuenta tu parte</Text>
+              </View>
+              <Switch
+                value={isShared}
+                onValueChange={setIsShared}
+                trackColor={{ false: THEME.colors.hairline, true: THEME.colors.accent }}
+                thumbColor={THEME.colors.elevated}
+                activeThumbColor={THEME.colors.elevated}
+              />
+            </View>
             {isShared && (
-               <TextInput 
-                  style={[styles.input, { marginTop: 15, borderColor: THEME.colors.accent }]}
-                  placeholder="Tu parte (Dime solo cuánto pagas tú)"
-                  placeholderTextColor={THEME.colors.textTertiary}
+              <View style={styles.partRow}>
+                <Text style={styles.partLabel}>Tu parte</Text>
+                <TextInput
+                  style={styles.partInput}
+                  placeholder={amount || '0'}
+                  placeholderTextColor={THEME.colors.inkFaint}
                   keyboardType="decimal-pad"
                   value={myPart}
-                  onChangeText={(val) => {
-                    if ((val.split(/[.,]/).length - 1) > 1) return;
-                    if (val !== '' && !/^\d*[.,]?\d*$/.test(val)) return;
-                    setMyPart(val);
-                  }}
-               />
+                  onChangeText={(val) => { if (isAmountText(val)) setMyPart(val); }}
+                />
+                <Text style={styles.partCurrency}>€</Text>
+              </View>
             )}
-
-            {/* Category selection */}
-            {type === 'expense' && (
-              <>
-                <Text style={styles.label}>Categoría</Text>
-                <View style={styles.categoryGrid}>
-                  {(categories || []).map(cat => (
-                    <TouchableOpacity 
-                      key={cat.id} 
-                      style={[styles.catItem, category === cat.id && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
-                      onPress={() => setCategory(cat.id)}
-                    >
-                      <Ionicons 
-                        name={cat.icon || 'cart-outline'} 
-                        size={20} 
-                        color={category === cat.id ? cat.color : THEME.colors.textTertiary} 
-                      />
-                      <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
+            {isShared && theyOwe > 0 && (
+              <Text style={styles.partHint}>Te tienen que devolver {formatMoney(theyOwe)}</Text>
             )}
+          </View>
+        )}
 
-            {/* Fecha: accesos rápidos Hoy / Ayer y "Otra fecha" que abre el
-                calendario del sistema directamente, sin pasos intermedios */}
-            <Text style={styles.label}>Fecha</Text>
-            <View style={styles.dateChips}>
-              <TouchableOpacity
-                style={[styles.dateChip, dateMode === 'today' && styles.dateChipActive]}
-                onPress={() => setDate(new Date())}
-              >
-                <Text style={[styles.dateChipText, dateMode === 'today' && styles.dateChipTextActive]}>Hoy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dateChip, dateMode === 'yesterday' && styles.dateChipActive]}
-                onPress={() => setDate(fromLocalDateKey(yesterdayKey))}
-              >
-                <Text style={[styles.dateChipText, dateMode === 'yesterday' && styles.dateChipTextActive]}>Ayer</Text>
-              </TouchableOpacity>
-
-              {Platform.OS === 'web' ? (
-                // En web, un <input type="date"> invisible cubre el botón: al
-                // tocarlo se abre el calendario del navegador a la primera
-                <View style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}>
-                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? THEME.colors.onAccent : THEME.colors.textSecondary} />
-                  <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
-                  <input
-                    type="date"
-                    aria-label="Elegir otra fecha"
-                    value={selectedKey || ''}
-                    onClick={(e) => { try { e.currentTarget.showPicker && e.currentTarget.showPicker(); } catch (_err) { /* navegador sin showPicker: el toque ya abre el calendario */ } }}
-                    onChange={(e) => {
-                      // Si el campo se vacía o es inválido, se mantiene la fecha anterior
-                      const picked = fromLocalDateKey(e.target.value);
-                      if (picked) setDate(picked);
-                    }}
-                    style={{
-                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                      opacity: 0, cursor: 'pointer', border: 'none', padding: 0, margin: 0,
-                    }}
-                  />
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? THEME.colors.onAccent : THEME.colors.textSecondary} />
-                  <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <Text style={styles.dateFull}>{fullDateLabel}</Text>
-
-            {showDatePicker && Platform.OS !== 'web' && (
-              <DateTimePicker
-                value={isValidDate(date) ? date : new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                themeVariant="light"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (event?.type !== 'dismissed' && selectedDate) setDate(selectedDate);
-                }}
-              />
-            )}
-
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.saveBtnText}>{initialData ? 'Guardar Cambios' : 'Guardar Movimiento'}</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+          <Text style={styles.saveBtnText}>{initialData ? 'Guardar cambios' : 'Guardar'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: THEME.colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: THEME.colors.surface,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    padding: 25,
-    paddingTop: 12,
-    maxHeight: '90%',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: THEME.colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  modalHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: THEME.space.lg,
   },
-  modalTitle: {
-    color: THEME.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '800',
+  title: {
+    ...THEME.text.heading,
+    fontSize: 24,
   },
-  closeBtn: {
-    padding: 5,
-  },
-  typeRow: {
+  amountWrap: {
     flexDirection: 'row',
-    backgroundColor: THEME.colors.sunken,
-    borderRadius: 18,
-    padding: 5,
-    marginBottom: 20,
-  },
-  typeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 14,
-  },
-  typeBtnActiveIncome: {
-    backgroundColor: THEME.colors.surface,
-  },
-  typeBtnActiveExpense: {
-    backgroundColor: THEME.colors.surface,
-  },
-  typeBtnText: {
-    color: THEME.colors.textTertiary,
-    fontWeight: '700',
-  },
-  typeBtnTextActive: {
-    color: THEME.colors.accent,
-  },
-  input: {
-    backgroundColor: THEME.colors.sunken,
-    borderRadius: 18,
-    padding: 18,
-    color: THEME.colors.textPrimary,
-    fontSize: 16,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  amountGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sharedBtn: {
-    width: 60,
-    height: 60,
-    backgroundColor: THEME.colors.sunken,
-    borderRadius: 18,
-    marginLeft: 12,
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    alignItems: 'baseline',
+    paddingVertical: THEME.space.xl,
   },
-  sharedBtnActive: {
-    backgroundColor: THEME.colors.accent,
-    borderColor: THEME.colors.accent,
+  amountInput: {
+    ...THEME.text.display,
+    fontSize: 56,
+    textAlign: 'right',
+    maxWidth: '80%',
+    padding: 0,
+    fontVariant: ['tabular-nums'],
+    outlineStyle: 'none',
+  },
+  amountCurrency: {
+    ...THEME.text.display,
+    fontSize: 40,
+    color: THEME.colors.inkSoft,
+    marginLeft: THEME.space.sm,
   },
   label: {
-    color: THEME.colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 15,
-    marginTop: 10,
-    textTransform: 'uppercase',
+    ...THEME.text.label,
+    marginTop: THEME.space.lg,
+    marginBottom: THEME.space.sm,
   },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
+  chipRow: {
+    gap: THEME.space.sm,
+    paddingRight: THEME.space.lg,
   },
-  catItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 15,
-    backgroundColor: THEME.colors.sunken,
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: THEME.radius.full,
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: THEME.colors.hairline,
+    backgroundColor: THEME.colors.elevated,
   },
-  catText: {
-    marginLeft: 8,
-    fontSize: 13,
-    fontWeight: '600',
-    color: THEME.colors.textTertiary,
+  chipText: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.small,
+    color: THEME.colors.ink,
   },
-  dateChips: {
+  input: {
+    ...THEME.text.body,
+    backgroundColor: THEME.colors.sunken,
+    borderRadius: THEME.radius.md,
+    paddingHorizontal: THEME.space.lg,
+    paddingVertical: 14,
+    outlineStyle: 'none',
+  },
+  dateRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: THEME.space.sm,
   },
   dateChip: {
     flex: 1,
@@ -408,11 +373,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 13,
-    borderRadius: 15,
+    paddingVertical: 11,
+    borderRadius: THEME.radius.md,
     backgroundColor: THEME.colors.sunken,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -421,38 +384,72 @@ const styles = StyleSheet.create({
   },
   dateChipActive: {
     backgroundColor: THEME.colors.accent,
-    borderColor: THEME.colors.accent,
   },
   dateChipText: {
-    color: THEME.colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.small,
+    color: THEME.colors.ink,
   },
   dateChipTextActive: {
     color: THEME.colors.onAccent,
   },
-  dateFull: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 8,
-    marginBottom: 25,
+  sharedBox: {
+    marginTop: THEME.space.xl,
+    paddingTop: THEME.space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: THEME.colors.hairline,
+  },
+  sharedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: THEME.space.md,
+  },
+  sharedTitle: {
+    ...THEME.text.bodyMedium,
+  },
+  sharedSub: {
+    ...THEME.text.small,
+    marginTop: 2,
+  },
+  partRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: THEME.space.md,
+    backgroundColor: THEME.colors.sunken,
+    borderRadius: THEME.radius.md,
+    paddingHorizontal: THEME.space.lg,
+  },
+  partLabel: {
+    ...THEME.text.small,
+    color: THEME.colors.ink,
+    marginRight: THEME.space.md,
+  },
+  partInput: {
+    ...THEME.text.amount,
+    flex: 1,
+    textAlign: 'right',
+    paddingVertical: 14,
+    outlineStyle: 'none',
+  },
+  partCurrency: {
+    ...THEME.text.amount,
+    color: THEME.colors.inkSoft,
     marginLeft: 4,
   },
+  partHint: {
+    ...THEME.text.small,
+    marginTop: THEME.space.sm,
+  },
   saveBtn: {
+    marginTop: THEME.space.xl,
     backgroundColor: THEME.colors.accent,
-    paddingVertical: 20,
-    borderRadius: 20,
+    paddingVertical: 16,
+    borderRadius: THEME.radius.md,
     alignItems: 'center',
-    shadowColor: THEME.colors.accent,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 8,
-    marginBottom: 30,
   },
   saveBtnText: {
+    fontFamily: THEME.fonts.strong,
+    fontSize: 16,
     color: THEME.colors.onAccent,
-    fontSize: 18,
-    fontWeight: '800',
   },
 });

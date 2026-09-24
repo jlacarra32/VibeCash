@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, Modal, Platform,
+  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME, CATEGORY_COLORS as COLORS } from '../constants/theme';
 import { showAlert, confirmAction } from '../logic/dialogs';
 import appConfig from '../../app.json';
 import ScreenHeader from '../components/ScreenHeader';
+import Sheet from '../components/Sheet';
 
 const APP_VERSION = appConfig.expo.version;
 
-
+// Icono automático según el nombre de la categoría
 const ICON_MAP = {
   // Ingresos
   nomina:'cash-outline', sueldo:'cash-outline', paga:'cash-outline',
@@ -69,274 +69,232 @@ const getSmartIcon = (name, type) => {
   return type === 'income' ? 'cash-outline' : 'cart-outline';
 };
 
-
-
 export default function ProfileScreen({
   userName, setUserName, setTransactions,
   categories, setCategories,
-  incomeCategories, setIncomeCategories,
   onFullReset,
 }) {
   const [tempName, setTempName] = useState(userName || '');
-  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatColor, setNewCatColor] = useState(COLORS[0]);
-  const newCatType = 'expense'; // Forzado a gasto
+  // Hoja de categoría: null | { mode: 'new' } | { mode: 'edit', cat }
+  const [sheet, setSheet] = useState(null);
+  const [catName, setCatName] = useState('');
+  const [catColor, setCatColor] = useState(COLORS[0]);
 
-  const handleUpdate = () => {
-    if (!tempName.trim()) { showAlert('Error', 'El nombre no puede estar vacío'); return; }
-    setUserName(tempName.trim());
-    showAlert('Actualizado', 'Nombre guardado correctamente');
+  useEffect(() => { setTempName(userName || ''); }, [userName]);
+
+  // El nombre se guarda al salir del campo; si se deja vacío, se recupera
+  const commitName = () => {
+    const name = tempName.trim();
+    if (!name) { setTempName(userName || ''); return; }
+    if (name !== userName) setUserName(name);
   };
 
-  const closeAddModal = () => {
-    setIsAddModalVisible(false);
-    setNewCatName('');
-    setNewCatColor(COLORS[0]);
+  const openNew = () => {
+    setCatName('');
+    setCatColor(COLORS[0]);
+    setSheet({ mode: 'new' });
   };
+  const openEdit = (cat) => {
+    setCatColor(cat.color);
+    setSheet({ mode: 'edit', cat });
+  };
+  const closeSheet = () => setSheet(null);
+  // Categoría que se está editando (null si la hoja está cerrada o es nueva)
+  const editingCat = sheet && sheet.mode === 'edit' ? sheet.cat : null;
 
   const handleAddCategory = () => {
-    const name = newCatName.trim();
+    const name = catName.trim();
     if (!name) return;
-    // El nombre hace de identificador: no puede repetirse (sin distinguir mayúsculas)
     const exists = (categories || []).some(c => c.id.toLowerCase() === name.toLowerCase());
     if (exists) {
       showAlert('Categoría repetida', `Ya existe una categoría llamada "${name}".`);
       return;
     }
-    const cat = { id: name, color: newCatColor, icon: getSmartIcon(name, 'expense') };
-    setCategories(prev => [...prev, cat]);
-    closeAddModal();
+    setCategories(prev => [...prev, { id: name, color: catColor, icon: getSmartIcon(name, 'expense') }]);
+    closeSheet();
   };
 
-  const totalCats = categories?.length || 0;
+  // Solo cambia el color: el nombre es la clave que enlaza con los movimientos
+  const handleSaveColor = () => {
+    if (!editingCat) return;
+    const id = editingCat.id;
+    // Sin cambios: no se reescribe lo guardado
+    if (catColor === editingCat.color) { closeSheet(); return; }
+    setCategories(prev => prev.map(c => (c.id === id ? { ...c, color: catColor } : c)));
+    closeSheet();
+  };
+
+  const handleDeleteCategory = () => {
+    if (!editingCat) return;
+    const id = editingCat.id;
+    confirmAction(
+      'Eliminar categoría',
+      `¿Eliminar "${id}"? Los movimientos que ya tengas en esta categoría no se borran.`,
+      () => { setCategories(prev => prev.filter(c => c.id !== id)); closeSheet(); },
+      'Eliminar'
+    );
+  };
+
+  const isNew = sheet && sheet.mode === 'new';
+  const previewName = isNew ? catName.trim() : editingCat?.id;
+  const previewIcon = isNew ? getSmartIcon(catName || '', 'expense') : (editingCat?.icon || 'cart-outline');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-
-      {/* Header */}
+    <View style={styles.container}>
       <ScreenHeader title="Ajustes" />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-      {/* Avatar hero */}
-      <View style={styles.heroCard}>
-        <View style={styles.avatarRing}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarEmoji}>
-              {userName?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
+        {/* Tú */}
+        <Text style={styles.groupLabel}>Tú</Text>
+        <View style={styles.group}>
+          <View style={[styles.row, styles.rowLast]}>
+            <Text style={styles.rowTitle}>Nombre</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={tempName}
+              onChangeText={setTempName}
+              onBlur={commitName}
+              onSubmitEditing={commitName}
+              placeholder="Tu nombre"
+              placeholderTextColor={THEME.colors.inkFaint}
+              returnKeyType="done"
+            />
           </View>
         </View>
-        <Text style={styles.heroName}>{userName || 'Usuario'}</Text>
-        <Text style={styles.heroSub}>Usuario de VibeCash</Text>
 
-        {/* Mini stats */}
-        <View style={styles.heroStats}>
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatVal}>{totalCats}</Text>
-            <Text style={styles.heroStatLabel}>Categorías</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={[styles.heroStatVal, { color: THEME.colors.accent }]}>VibeCash</Text>
-            <Text style={styles.heroStatLabel}>v{APP_VERSION}</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Ionicons name="shield-checkmark" size={16} color={THEME.colors.success} />
-            <Text style={styles.heroStatLabel}>Privado</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.content}>
-
-        {/* ── Nombre ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={18} color={THEME.colors.accent} />
-            <Text style={styles.sectionTitle}>Nombre de usuario</Text>
-          </View>
-          <TextInput
-            style={styles.input}
-            value={tempName}
-            onChangeText={setTempName}
-            placeholder="Escribe tu nombre..."
-            placeholderTextColor={THEME.colors.textSecondary}
-          />
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleUpdate}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={THEME.colors.onAccent} />
-            <Text style={styles.primaryBtnText}>Guardar nombre</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Categorías ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="grid-outline" size={18} color={THEME.colors.accent} />
-            <Text style={styles.sectionTitle}>Categorías</Text>
-          </View>
-          <Text style={styles.sectionSub}>Toca la ✕ para eliminar una categoría</Text>
-
-          <View style={styles.catGrid}>
-            {(categories || []).map(cat => (
-              <View key={cat.id} style={[styles.catCard, { borderColor: cat.color + '60' }]}>
-                <View style={[styles.catCardIcon, { backgroundColor: cat.color + '20' }]}>
-                  <Ionicons name={cat.icon || 'cart-outline'} size={16} color={cat.color} />
-                </View>
-                <Text style={[styles.catCardName, { color: cat.color }]}>{cat.id}</Text>
-                <TouchableOpacity
-                  onPress={() => confirmAction(
-                    'Eliminar categoría',
-                    `¿Eliminar "${cat.id}"? Los movimientos que ya tengas en esta categoría no se borran.`,
-                    () => setCategories(prev => prev.filter(c => c.id !== cat.id)),
-                    'Eliminar'
-                  )}
-                  style={styles.catRemoveBtn}
-                >
-                  <Ionicons name="close-circle" size={16} color={THEME.colors.error} />
-                </TouchableOpacity>
+        {/* Categorías */}
+        <Text style={styles.groupLabel}>Categorías</Text>
+        <View style={styles.group}>
+          {(categories || []).map(cat => (
+            <TouchableOpacity key={cat.id} style={styles.row} onPress={() => openEdit(cat)} activeOpacity={0.6}>
+              <View style={[styles.catIcon, { backgroundColor: cat.color + '1F' }]}>
+                <Ionicons name={cat.icon || 'cart-outline'} size={16} color={cat.color} />
               </View>
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.outlineBtn} onPress={() => setIsAddModalVisible(true)}>
-            <Ionicons name="add-circle-outline" size={18} color={THEME.colors.accent} />
-            <Text style={styles.outlineBtnText}>Nueva categoría</Text>
+              <Text style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{cat.id}</Text>
+              <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={[styles.row, styles.rowLast]} onPress={openNew} activeOpacity={0.6}>
+            <View style={[styles.catIcon, { backgroundColor: THEME.colors.sunken }]}>
+              <Ionicons name="add" size={18} color={THEME.colors.accent} />
+            </View>
+            <Text style={[styles.rowTitle, { color: THEME.colors.accent }]}>Nueva categoría</Text>
           </TouchableOpacity>
         </View>
+        <Text style={styles.groupNote}>Toca una categoría para cambiar su color o eliminarla.</Text>
 
-        {/* ── Datos ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="shield-outline" size={18} color={THEME.colors.accent} />
-            <Text style={styles.sectionTitle}>Gestión de datos</Text>
-          </View>
-          <Text style={styles.sectionSub}>Los datos se guardan sólo en este dispositivo</Text>
-
+        {/* Datos */}
+        <Text style={styles.groupLabel}>Tus datos</Text>
+        <View style={styles.group}>
           <TouchableOpacity
-            style={styles.dangerRowSoft}
+            style={styles.row}
+            activeOpacity={0.6}
             onPress={() => confirmAction(
               'Borrar movimientos',
-              '¿Borrar todos los movimientos? Se conservarán nombre y categorías.',
+              '¿Borrar todos los movimientos? Se conservarán tu nombre y tus categorías.',
               () => setTransactions([]),
               'Borrar'
             )}
           >
-            <View style={[styles.dangerRowIcon, { backgroundColor: THEME.colors.warning + '20' }]}>
-              <Ionicons name="trash-outline" size={18} color={THEME.colors.warning} />
-            </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.dangerRowTitle}>Borrar movimientos</Text>
-              <Text style={styles.dangerRowSub}>Mantiene nombre y categorías</Text>
+              <Text style={[styles.rowTitle, { color: THEME.colors.danger }]}>Borrar movimientos</Text>
+              <Text style={styles.rowSub}>Conserva tu nombre y tus categorías</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={THEME.colors.textSecondary} />
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={styles.dangerRowHard}
+            style={[styles.row, styles.rowLast]}
+            activeOpacity={0.6}
             onPress={() => confirmAction(
-              'Reinicio total',
+              'Empezar de cero',
               'Se borrará TODO: nombre, categorías y movimientos. ¿Seguro?',
               onFullReset,
-              'Reiniciar'
+              'Borrar todo'
             )}
           >
-            <View style={[styles.dangerRowIcon, { backgroundColor: THEME.colors.error + '20' }]}>
-              <Ionicons name="refresh-circle-outline" size={18} color={THEME.colors.error} />
-            </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.dangerRowTitle, { color: THEME.colors.error }]}>Reinicio completo</Text>
-              <Text style={styles.dangerRowSub}>Borra todo, vuelve al onboarding</Text>
+              <Text style={[styles.rowTitle, { color: THEME.colors.danger }]}>Empezar de cero</Text>
+              <Text style={styles.rowSub}>Borra todo y vuelve a la bienvenida</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={THEME.colors.error} />
           </TouchableOpacity>
         </View>
+        <Text style={styles.groupNote}>Todo se guarda solo en este dispositivo. Nadie más puede verlo.</Text>
 
-        {/* ── Sobre la app ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="information-circle-outline" size={18} color={THEME.colors.accent} />
-            <Text style={styles.sectionTitle}>Sobre VibeCash</Text>
+        {/* Acerca de */}
+        <Text style={styles.groupLabel}>Acerca de</Text>
+        <View style={styles.group}>
+          <View style={styles.row}>
+            <Text style={[styles.rowTitle, { flex: 1 }]}>Versión</Text>
+            <Text style={styles.rowValue}>{APP_VERSION}</Text>
           </View>
-          {[
-            { icon: 'code-slash-outline', label: 'Desarrollado por', value: 'Javier Lacarra Rubio' },
-            { icon: 'layers-outline', label: 'Versión', value: APP_VERSION },
-            { icon: 'shield-checkmark-outline', label: 'Privacidad', value: 'Datos 100% locales' },
-            { icon: 'phone-portrait-outline', label: 'Plataforma', value: Platform.OS === 'web' ? 'Web App' : 'Móvil (Expo)' },
-          ].map(row => (
-            <View key={row.label} style={styles.infoRow}>
-              <Ionicons name={row.icon} size={16} color={THEME.colors.textSecondary} />
-              <Text style={styles.infoLabel}>{row.label}</Text>
-              <Text style={styles.infoValue}>{row.value}</Text>
-            </View>
-          ))}
+          <View style={[styles.row, styles.rowLast]}>
+            <Text style={[styles.rowTitle, { flex: 1 }]}>Hecha por</Text>
+            <Text style={styles.rowValue}>Javier Lacarra Rubio</Text>
+          </View>
         </View>
 
-      </View>
+        <Text style={styles.colophon}>VibeCash</Text>
+      </ScrollView>
 
-      {/* ── Modal Nueva Categoría (bottom sheet) ── */}
-      <Modal visible={isAddModalVisible} animationType="slide" transparent onRequestClose={closeAddModal}>
-        {/* Overlay — tap to close */}
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeAddModal}>
-          {/* Sheet — tap inside doesn't close */}
-          <TouchableOpacity activeOpacity={1} style={styles.modalSheet} onPress={() => {}}>
-            {/* Handle */}
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Nueva Categoría</Text>
+      {/* Hoja: nueva categoría / editar categoría */}
+      <Sheet visible={!!sheet} onClose={closeSheet}>
+        {sheet && (
+          <View>
+            <Text style={styles.sheetTitle}>{isNew ? 'Nueva categoría' : editingCat?.id}</Text>
 
+            {isNew && (
+              <TextInput
+                style={styles.sheetInput}
+                placeholder="Nombre (p. ej. Gimnasio)"
+                placeholderTextColor={THEME.colors.inkFaint}
+                value={catName}
+                onChangeText={setCatName}
+                autoFocus
+              />
+            )}
 
-
-            {/* Nombre */}
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Nombre (ej: Gimnasio)"
-              placeholderTextColor={THEME.colors.textSecondary}
-              value={newCatName}
-              onChangeText={setNewCatName}
-              autoFocus
-            />
-
-            {/* Color */}
-            <Text style={styles.modalLabel}>Color</Text>
+            <Text style={styles.sheetLabel}>Color</Text>
             <View style={styles.colorRow}>
-              {COLORS.map(c => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.colorCircle, { backgroundColor: c }, newCatColor === c && styles.colorCircleActive]}
-                  onPress={() => setNewCatColor(c)}
-                >
-                  {newCatColor === c && <Ionicons name="checkmark" size={14} color={THEME.colors.onAccent} />}
-                </TouchableOpacity>
-              ))}
+              {COLORS.map(c => {
+                const active = (catColor || '').toUpperCase() === c.toUpperCase();
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.colorSwatch, { backgroundColor: c }, active && styles.colorSwatchActive]}
+                    onPress={() => setCatColor(c)}
+                    accessibilityLabel={`Color ${c}`}
+                  >
+                    {active && <Ionicons name="checkmark" size={16} color={THEME.colors.onAccent} />}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
-            {/* Preview */}
-            {newCatName.trim() !== '' && (
-              <View style={styles.previewRow}>
-                <View style={[styles.previewIcon, { backgroundColor: newCatColor + '25' }]}>
-                  <Ionicons name={getSmartIcon(newCatName, newCatType)} size={18} color={newCatColor} />
+            {!!previewName && (
+              <View style={styles.preview}>
+                <View style={[styles.catIcon, { backgroundColor: catColor + '1F' }]}>
+                  <Ionicons name={previewIcon} size={16} color={catColor} />
                 </View>
-                <Text style={[styles.previewText, { color: newCatColor }]}>{newCatName}</Text>
+                <Text style={styles.rowTitle}>{previewName}</Text>
               </View>
             )}
 
-            {/* Botones */}
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={closeAddModal}>
-                <Text style={styles.modalBtnCancelText}>Cancelar</Text>
+            <TouchableOpacity
+              style={[styles.primaryBtn, isNew && !catName.trim() && { opacity: 0.4 }]}
+              onPress={isNew ? handleAddCategory : handleSaveColor}
+              disabled={isNew && !catName.trim()}
+            >
+              <Text style={styles.primaryBtnText}>{isNew ? 'Crear categoría' : 'Guardar'}</Text>
+            </TouchableOpacity>
+
+            {!isNew && (
+              <TouchableOpacity style={styles.deleteLink} onPress={handleDeleteCategory}>
+                <Text style={styles.deleteLinkText}>Eliminar categoría</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: newCatName.trim() ? THEME.colors.accent : THEME.colors.border }]}
-                onPress={handleAddCategory}
-                disabled={!newCatName.trim()}
-              >
-                <Text style={styles.modalBtnText}>Guardar</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-    </ScrollView>
+            )}
+          </View>
+        )}
+      </Sheet>
+    </View>
   );
 }
 
@@ -345,377 +303,135 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  // Hero
-  heroCard: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 20,
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 28,
-    padding: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  scroll: {
+    paddingHorizontal: THEME.layout.gutter,
+    paddingBottom: 60,
   },
-  avatarRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2,
-    borderColor: THEME.colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-    padding: 3,
-  },
-  avatarCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: THEME.colors.accent + '25',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: THEME.colors.accent,
-  },
-  heroName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: THEME.colors.textPrimary,
-    marginBottom: 4,
-  },
-  heroSub: {
-    fontSize: 13,
-    color: THEME.colors.textSecondary,
-    marginBottom: 20,
-  },
-  heroStats: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: THEME.colors.border,
-    paddingTop: 16,
-    width: '100%',
-    justifyContent: 'space-around',
-  },
-  heroStat: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  heroStatDivider: {
-    width: 1,
-    backgroundColor: THEME.colors.border,
-  },
-  heroStatVal: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: THEME.colors.textPrimary,
-  },
-  heroStatLabel: {
-    fontSize: 10,
-    color: THEME.colors.textSecondary,
-    fontWeight: '600',
-  },
-  // Content sections
-  content: {
-    paddingHorizontal: 20,
-  },
-  section: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: THEME.colors.textPrimary,
-  },
-  sectionSub: {
-    fontSize: 12,
-    color: THEME.colors.textSecondary,
-    marginBottom: 16,
-    marginTop: -8,
-  },
-  input: {
-    backgroundColor: THEME.colors.background,
-    borderRadius: 14,
-    padding: 14,
-    color: THEME.colors.textPrimary,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    marginBottom: 14,
-  },
-  primaryBtn: {
-    backgroundColor: THEME.colors.accent,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  primaryBtnText: {
-    color: THEME.colors.onAccent,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  outlineBtn: {
-    borderWidth: 1.5,
-    borderColor: THEME.colors.accent,
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: 'center',
-    marginTop: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  outlineBtnText: {
-    color: THEME.colors.accent,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  // Category grid
   groupLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 10,
+    ...THEME.text.label,
+    marginTop: THEME.space.xl,
+    marginBottom: THEME.space.sm,
+    marginLeft: THEME.space.xs,
   },
-  catGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  catCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
+  group: {
     backgroundColor: THEME.colors.elevated,
-    gap: 6,
+    borderRadius: THEME.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: THEME.colors.hairline,
+    paddingLeft: THEME.space.lg,
   },
-  catCardIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+  groupNote: {
+    ...THEME.text.small,
+    marginTop: THEME.space.sm,
+    marginHorizontal: THEME.space.xs,
+    lineHeight: 18,
   },
-  catCardName: {
-    fontSize: 13,
-    fontWeight: '700',
-    maxWidth: 80,
-  },
-  catRemoveBtn: {
-    padding: 2,
-  },
-  // Danger rows
-  dangerRowSoft: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.colors.background,
-    borderRadius: 14,
-    padding: 14,
-    gap: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  dangerRowHard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.error + '08',
-    borderRadius: 14,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: THEME.colors.error + '40',
-  },
-  dangerRowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dangerRowTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: THEME.colors.textPrimary,
-    marginBottom: 2,
-  },
-  dangerRowSub: {
-    fontSize: 11,
-    color: THEME.colors.textSecondary,
-  },
-  // Info rows
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    minHeight: 50,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    paddingRight: THEME.space.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: THEME.colors.hairline,
   },
-  infoLabel: {
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+  rowTitle: {
+    ...THEME.text.body,
+  },
+  rowSub: {
+    ...THEME.text.small,
+    marginTop: 2,
+  },
+  rowValue: {
+    ...THEME.text.body,
+    color: THEME.colors.inkSoft,
+  },
+  nameInput: {
+    ...THEME.text.body,
     flex: 1,
-    fontSize: 13,
-    color: THEME.colors.textSecondary,
-    fontWeight: '600',
+    textAlign: 'right',
+    color: THEME.colors.inkSoft,
+    marginLeft: THEME.space.lg,
+    paddingVertical: 4,
+    outlineStyle: 'none',
   },
-  infoValue: {
-    fontSize: 13,
-    color: THEME.colors.textPrimary,
-    fontWeight: '700',
-  },
-  // Modal bottom sheet
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: THEME.colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: THEME.colors.surface,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    paddingBottom: 40,
-    borderTopWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: THEME.colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: THEME.colors.textPrimary,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  typeBtn: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 14,
+  catIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: THEME.colors.background,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+    marginRight: THEME.space.md,
   },
-  typeBtnActive: {
-    backgroundColor: THEME.colors.accent + '20',
-    borderColor: THEME.colors.accent,
+  colophon: {
+    fontFamily: THEME.fonts.displayItalic,
+    fontSize: THEME.type.heading,
+    color: THEME.colors.inkFaint,
+    textAlign: 'center',
+    marginTop: 40,
   },
-  typeBtnText: {
-    color: THEME.colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 14,
+  sheetTitle: {
+    ...THEME.text.heading,
+    fontSize: 24,
+    marginBottom: THEME.space.lg,
   },
-  typeBtnTextActive: {
-    color: THEME.colors.accent,
-    fontWeight: '800',
+  sheetInput: {
+    ...THEME.text.body,
+    backgroundColor: THEME.colors.sunken,
+    borderRadius: THEME.radius.md,
+    paddingHorizontal: THEME.space.lg,
+    paddingVertical: 14,
+    outlineStyle: 'none',
   },
-  modalInput: {
-    backgroundColor: THEME.colors.background,
-    borderRadius: 14,
-    padding: 14,
-    color: THEME.colors.textPrimary,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    marginBottom: 16,
-  },
-  modalLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
+  sheetLabel: {
+    ...THEME.text.label,
+    marginTop: THEME.space.lg,
+    marginBottom: THEME.space.sm,
   },
   colorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
+    gap: THEME.space.md,
   },
-  colorCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  colorSwatch: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  colorCircleActive: {
+  colorSwatchActive: {
     borderWidth: 2,
     borderColor: THEME.colors.ink,
   },
-  previewRow: {
+  preview: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: THEME.colors.background,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 4,
+    marginTop: THEME.space.lg,
   },
-  previewIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewText: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  modalBtn: {
-    flex: 1,
+  primaryBtn: {
+    marginTop: THEME.space.xl,
+    backgroundColor: THEME.colors.accent,
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: THEME.radius.md,
     alignItems: 'center',
   },
-  modalBtnCancel: {
-    backgroundColor: THEME.colors.sunken,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  modalBtnCancelText: {
-    color: THEME.colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  modalBtnText: {
+  primaryBtnText: {
+    fontFamily: THEME.fonts.strong,
+    fontSize: THEME.type.body,
     color: THEME.colors.onAccent,
-    fontWeight: '800',
-    fontSize: 14,
+  },
+  deleteLink: {
+    alignItems: 'center',
+    paddingVertical: THEME.space.lg,
+    marginTop: THEME.space.xs,
+  },
+  deleteLinkText: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.body,
+    color: THEME.colors.danger,
   },
 });
