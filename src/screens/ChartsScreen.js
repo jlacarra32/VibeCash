@@ -6,73 +6,12 @@ import {
   Animated,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOP = THEME.layout.screenTop;
-
-// ─── Tiny donut ring using stacked arcs ─────────────────────────────────────
-function DonutSegments({ categories, categoryTotals, total, size = 130 }) {
-  const strokeW = 18;
-  const radius = (size - strokeW) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const center = size / 2;
-
-  let offset = 0;
-  const segments = (categories || [])
-    .map(cat => {
-      const val = categoryTotals[cat.id] || 0;
-      return { cat, val };
-    })
-    .filter(s => s.val > 0);
-
-  if (total <= 0 || segments.length === 0) {
-    return (
-      <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{
-          width: size, height: size, borderRadius: size / 2,
-          borderWidth: strokeW, borderColor: 'rgba(255,255,255,0.05)',
-          justifyContent: 'center', alignItems: 'center'
-        }}>
-          <Text style={{ color: THEME.colors.textSecondary, fontSize: 11 }}>Sin datos</Text>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ width: size, height: size }}>
-      {/* SVG-like rings via absolute positioned views – React Native SVG not needed */}
-      {segments.map(({ cat, val }, i) => {
-        const pct = val / total;
-        const segEnd = offset + pct;
-        const seg = { cat, pct, start: offset, end: segEnd };
-        offset = segEnd;
-        return null; // rendered below as progress bars
-      })}
-      {/* Fallback: plain coloured stroke ring */}
-      <View style={{
-        position: 'absolute', top: 0, left: 0, width: size, height: size,
-        borderRadius: size / 2, borderWidth: strokeW, borderColor: 'rgba(255,255,255,0.05)'
-      }} />
-      {/* Inner text */}
-      <View style={{
-        position: 'absolute', top: strokeW, left: strokeW,
-        width: size - strokeW * 2, height: size - strokeW * 2,
-        borderRadius: (size - strokeW * 2) / 2,
-        justifyContent: 'center', alignItems: 'center'
-      }}>
-        <Text style={{ color: THEME.colors.textSecondary, fontSize: 10, fontWeight: '600' }}>GASTO</Text>
-        <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '900' }}>{total.toFixed(0)}€</Text>
-      </View>
-    </View>
-  );
-}
 
 // ─── Animated horizontal bar ─────────────────────────────────────────────────
 function HorizBar({ color, pct, delay = 0 }) {
@@ -85,7 +24,7 @@ function HorizBar({ color, pct, delay = 0 }) {
       delay,
       useNativeDriver: false,
     }).start();
-  }, [pct]);
+  }, [pct, delay, anim]);
 
   const widthInterp = anim.interpolate({
     inputRange: [0, 1],

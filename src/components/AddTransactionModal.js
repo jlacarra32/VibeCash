@@ -33,6 +33,9 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     } else {
       resetForm();
     }
+    // Solo se rellena/limpia al abrir o cambiar el movimiento a editar; no al
+    // cambiar tipo o categorías mientras el usuario escribe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, visible]);
 
   const handleSave = () => {
