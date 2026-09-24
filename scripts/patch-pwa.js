@@ -33,11 +33,13 @@ const manifest = {
   display: 'standalone',
   orientation: 'portrait',
   background_color: '#0F172A',
-  theme_color: '#6C63FF',
+  theme_color: '#8B5CF6', // mismo violeta que THEME.colors.accent
+  // Los tres archivos son copias de assets/images/icon.png (640x640): se
+  // declara su tamaño real. Se mantienen los nombres de archivo para no
+  // romper las instalaciones existentes.
   icons: [
-    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-    { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'any' },
+    { src: '/icon-512.png', sizes: '640x640', type: 'image/png', purpose: 'any' },
+    { src: '/icon-192.png', sizes: '640x640', type: 'image/png', purpose: 'any' },
   ],
 };
 

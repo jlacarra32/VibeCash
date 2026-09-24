@@ -6,6 +6,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { showAlert, confirmAction } from '../logic/dialogs';
+import appConfig from '../../app.json';
+
+const APP_VERSION = appConfig.expo.version;
 
 const TOP = THEME.layout.screenTop;
 
@@ -138,7 +141,7 @@ export default function ProfileScreen({
           <View style={styles.heroStatDivider} />
           <View style={styles.heroStat}>
             <Text style={[styles.heroStatVal, { color: THEME.colors.accent }]}>VibeCash</Text>
-            <Text style={styles.heroStatLabel}>v1.5.0</Text>
+            <Text style={styles.heroStatLabel}>v{APP_VERSION}</Text>
           </View>
           <View style={styles.heroStatDivider} />
           <View style={styles.heroStat}>
@@ -260,7 +263,7 @@ export default function ProfileScreen({
           </View>
           {[
             { icon: 'code-slash-outline', label: 'Desarrollado por', value: 'Javier Lacarra Rubio' },
-            { icon: 'layers-outline', label: 'Versión', value: '1.5.0' },
+            { icon: 'layers-outline', label: 'Versión', value: APP_VERSION },
             { icon: 'shield-checkmark-outline', label: 'Privacidad', value: 'Datos 100% locales' },
             { icon: 'phone-portrait-outline', label: 'Plataforma', value: Platform.OS === 'web' ? 'Web App' : 'Móvil (Expo)' },
           ].map(row => (

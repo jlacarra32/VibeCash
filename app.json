@@ -2,18 +2,18 @@
   "expo": {
     "name": "VibeCash",
     "slug": "vibecash",
-    "version": "1.0.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "aplicaciongastos",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -25,7 +25,7 @@
       "favicon": "./assets/images/favicon.png",
       "icon": "./assets/images/icon.png",
       "backgroundColor": "#0F172A",
-      "themeColor": "#6C63FF",
+      "themeColor": "#8B5CF6",
       "name": "VibeCash",
       "shortName": "VibeCash",
       "description": "VibeCash - Tu control de gastos con estilo",

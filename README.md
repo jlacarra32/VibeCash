@@ -1,50 +1,34 @@
-# Welcome to your Expo app 👋
+# VibeCash
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App de control de gastos personales hecha con Expo / React Native. Se publica como web app (PWA) en Vercel.
 
-## Get started
+Los datos (movimientos, nombre y categorías) se guardan **solo en el dispositivo**, en el almacenamiento local del navegador o del móvil.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Desarrollo
 
 ```bash
-npm run reset-project
+npm install
+npm run web
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+En Windows, si PowerShell bloquea `npm`, usa `npm.cmd run web`.
 
-## Learn more
+## Build para producción
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm run build
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Genera la web en `dist/` y añade el manifest y los iconos de PWA (`scripts/patch-pwa.js`).
 
-## Join the community
+## Estructura
 
-Join our community of developers creating universal apps.
+- `App.js`: estado global, carga y guardado de datos, navegación y onboarding.
+- `src/screens/`: pantallas (Inicio, Análisis, Calendario, Historial, Perfil).
+- `src/components/AddTransactionModal.js`: formulario para crear y editar movimientos.
+- `src/logic/`: cálculos (`cashFlow.js`), fechas en hora local (`dates.js`), diálogos web/móvil (`dialogs.js`) y utilidades (`helpers.js`).
+- `src/constants/theme.js`: colores, tipografía y categorías por defecto.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Datos guardados
+
+Claves de almacenamiento: `user_transactions`, `user_name`, `user_categories`, `user_income_categories` y `has_seen_welcome`. **No cambies estas claves ni el formato de los movimientos**, o los usuarios actuales perderían sus datos al actualizar.
