@@ -14,7 +14,7 @@ import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TOP = Platform.OS === 'web' ? 20 : 50;
+const TOP = THEME.layout.screenTop;
 
 // ─── Tiny donut ring using stacked arcs ─────────────────────────────────────
 function DonutSegments({ categories, categoryTotals, total, size = 130 }) {

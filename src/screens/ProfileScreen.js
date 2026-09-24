@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { showAlert, confirmAction } from '../logic/dialogs';
 
-const TOP = Platform.OS === 'web' ? 20 : 50;
+const TOP = THEME.layout.screenTop;
 
 const ICON_MAP = {
   // Ingresos

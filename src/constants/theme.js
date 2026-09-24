@@ -31,6 +31,9 @@ export const THEME = {
     borderRadius: 20, // Más redondeado para look moderno
     padding: 16,
     margin: 16,
+    // Espacio sobre la cabecera de cada pantalla. El hueco de la barra de
+    // estado / notch ya lo añade SafeAreaView en App.js.
+    screenTop: 20,
   }
 };
 

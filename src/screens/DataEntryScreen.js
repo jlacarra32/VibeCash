@@ -5,51 +5,49 @@ import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
 
-const TOP = Platform.OS === 'web' ? 20 : 50;
+const TOP = THEME.layout.screenTop;
 
 export default function DataEntryScreen({ transactions, onEdit, onDelete, userName, categories, incomeCategories, onGoToHistory }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
+  const displayBalanceRef = useRef(0); // valor mostrado en cada momento (para no partir de uno viejo)
   const balanceAnim = useRef(new Animated.Value(1)).current;
 
   // Efecto para animar el balance cuando cambia
   useEffect(() => {
-    const cashFlow = calculateCashFlow(transactions, timeFilter);
-    const target = cashFlow.netBalance;
-    
+    const target = calculateCashFlow(transactions, timeFilter).netBalance;
+
     // Animación de escala/opacidad
     Animated.sequence([
-      Animated.timing(balanceAnim, { toValue: 0.8, duration: 100, useNativeDriver: true }),
-      Animated.timing(balanceAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(balanceAnim, { toValue: 0.8, duration: 100, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(balanceAnim, { toValue: 1, duration: 400, useNativeDriver: Platform.OS !== 'web' }),
     ]).start();
 
-    // Simulación de contador (micro-interacción)
-    let start = displayBalance;
-    const end = target;
-    if (start === end) return;
-    
+    // Contador animado desde el valor que se está mostrando ahora mismo
+    const start = displayBalanceRef.current;
+    if (start === target) return;
+
     const duration = 800;
     const startTime = Date.now();
-    
+    let frameId;
+
     const animate = () => {
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
+      const progress = Math.min((Date.now() - startTime) / duration, 1);
       // Easing out expo
       const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      const current = start + (end - start) * easeProgress;
-      
+      const current = start + (target - start) * easeProgress;
+
+      displayBalanceRef.current = current;
       setDisplayBalance(current);
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
+
+      if (progress < 1) frameId = requestAnimationFrame(animate);
     };
-    
-    requestAnimationFrame(animate);
-  }, [timeFilter, transactions]);
+
+    frameId = requestAnimationFrame(animate);
+    // Si cambia el filtro a mitad o se sale de la pantalla, se cancela la animación
+    return () => cancelAnimationFrame(frameId);
+  }, [timeFilter, transactions, balanceAnim]);
 
   const cashFlow = calculateCashFlow(transactions, timeFilter);
 

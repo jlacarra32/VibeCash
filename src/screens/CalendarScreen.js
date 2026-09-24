@@ -6,7 +6,7 @@ import { THEME } from '../constants/theme';
 import { getCategoryColor, getCategoryIcon } from '../logic/helpers';
 import { toLocalDateKey } from '../logic/dates';
 
-const TOP = Platform.OS === 'web' ? 20 : 50;
+const TOP = THEME.layout.screenTop;
 
 LocaleConfig.locales['es'] = {
   monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],

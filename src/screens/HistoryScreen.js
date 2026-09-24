@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
 
-const TOP = Platform.OS === 'web' ? 20 : 50;
+const TOP = THEME.layout.screenTop;
 
 export default function HistoryScreen({ transactions, categories, incomeCategories, onEdit, onDelete, onBack }) {
   const [search, setSearch] = useState('');

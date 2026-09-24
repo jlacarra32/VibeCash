@@ -61,24 +61,21 @@ import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('DataEntry');
-  const [displayedScreen, setDisplayedScreen] = useState('DataEntry');
   const screenOpacity = useRef(new Animated.Value(1)).current;
 
+  // Cambia de pantalla al instante (la pestaña se marca enseguida) y hace un
+  // fundido de entrada. Si se pulsa otra pestaña durante el fundido, se corta
+  // la animación anterior en vez de encadenarse.
   const navigate = useCallback((screen) => {
     if (screen === currentScreen) return;
+    screenOpacity.stopAnimation();
+    screenOpacity.setValue(0);
+    setCurrentScreen(screen);
     Animated.timing(screenOpacity, {
-      toValue: 0,
-      duration: 120,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentScreen(screen);
-      setDisplayedScreen(screen);
-      Animated.timing(screenOpacity, {
-        toValue: 1,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    });
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
   }, [currentScreen, screenOpacity]);
   const [transactions, setTransactions] = useState([]);
   const [userName, setUserName] = useState(null);
@@ -413,7 +410,7 @@ const styles = StyleSheet.create({
   navBar: {
     flexDirection: 'row',
     backgroundColor: THEME.colors.surface,
-    paddingBottom: Platform.OS === 'ios' ? 25 : 15,
+    paddingBottom: 15, // el hueco de la barra de gestos lo añade SafeAreaView
     paddingTop: 15,
     borderTopWidth: 1,
     borderTopColor: THEME.colors.border,
