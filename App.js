@@ -10,6 +10,7 @@ import ChartsScreen from './src/screens/ChartsScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import { showAlert, confirmAction } from './src/logic/dialogs';
+import { fromLocalDateKey } from './src/logic/dates';
 
 // Memoria de emergencia por si el móvil bloquea el almacenamiento
 let backupStorage = {};
@@ -147,8 +148,15 @@ export default function App() {
     setModalVisible(true);
   };
 
-  const openAddModal = () => {
+  // Día seleccionado en el Calendario ('YYYY-MM-DD'). Se usa como fecha por
+  // defecto al pulsar "+" estando en esa pantalla.
+  const calendarDateRef = useRef(null);
+  const [newTxDate, setNewTxDate] = useState(null);
+
+  // dateKey opcional: abre el formulario con ese día ya puesto
+  const openAddModal = (dateKey) => {
     setEditingTransaction(null);
+    setNewTxDate(typeof dateKey === 'string' ? fromLocalDateKey(dateKey) : null);
     setModalVisible(true);
   };
 
@@ -214,7 +222,15 @@ export default function App() {
             : currentScreen === 'Charts'
             ? <ChartsScreen transactions={transactions} categories={categories} />
             : currentScreen === 'Calendar'
-            ? <CalendarScreen transactions={transactions} categories={categories} incomeCategories={incomeCategories} />
+            ? <CalendarScreen
+                transactions={transactions}
+                categories={categories}
+                incomeCategories={incomeCategories}
+                onAddForDate={openAddModal}
+                onSelectedDateChange={(dateKey) => { calendarDateRef.current = dateKey; }}
+                onEdit={openEditModal}
+                onDelete={handleDeleteTransaction}
+              />
             : currentScreen === 'History'
             ? <HistoryScreen 
                 transactions={transactions} 
@@ -267,7 +283,7 @@ export default function App() {
           <View style={styles.fabContainer}>
             <TouchableOpacity 
               style={styles.fabBtn}
-              onPress={openAddModal}
+              onPress={() => openAddModal(currentScreen === 'Calendar' ? calendarDateRef.current : null)}
             >
               <Ionicons name="add" size={32} color="#FFF" />
             </TouchableOpacity>
@@ -390,6 +406,7 @@ export default function App() {
           onClose={() => { setModalVisible(false); setEditingTransaction(null); }} 
           onSave={handleSaveTransaction} 
           initialData={editingTransaction}
+          defaultDate={newTxDate}
           categories={categories}
           incomeCategories={incomeCategories}
         />

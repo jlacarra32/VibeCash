@@ -9,7 +9,9 @@ import { THEME } from '../constants/theme';
 import { toLocalDateKey, fromLocalDateKey, isValidDate } from '../logic/dates';
 import { showAlert } from '../logic/dialogs';
 
-export default function AddTransactionModal({ visible, onClose, onSave, initialData, categories, incomeCategories }) {
+// defaultDate: fecha con la que se abre un movimiento NUEVO (p. ej. el día
+// elegido en el calendario). Si no se pasa, se usa hoy.
+export default function AddTransactionModal({ visible, onClose, onSave, initialData, defaultDate, categories, incomeCategories }) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('expense'); 
@@ -36,7 +38,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     // Solo se rellena/limpia al abrir o cambiar el movimiento a editar; no al
     // cambiar tipo o categorías mientras el usuario escribe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, visible]);
+  }, [initialData, visible, defaultDate]);
 
   const handleSave = () => {
     const normalizedAmount = amount.replace(',', '.');
@@ -78,7 +80,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setAmount('');
     setIsShared(false);
     setMyPart('');
-    setDate(new Date());
+    setDate(defaultDate && isValidDate(defaultDate) ? new Date(defaultDate) : new Date());
     setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,10 +17,18 @@ LocaleConfig.locales['es'] = {
 };
 LocaleConfig.defaultLocale = 'es';
 
-export default function CalendarScreen({ transactions, categories, incomeCategories }) {
+export default function CalendarScreen({
+  transactions, categories, incomeCategories,
+  onAddForDate, onSelectedDateChange, onEdit, onDelete,
+}) {
   const today = toLocalDateKey(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTx, setSelectedTx] = useState(null);
+
+  // Avisar a App del día elegido, para que el botón "+" lo use como fecha
+  useEffect(() => {
+    if (onSelectedDateChange) onSelectedDateChange(selectedDate);
+  }, [selectedDate, onSelectedDateChange]);
 
   // Mes que se está viendo en el calendario (los totales siguen al mes visible)
   const [visibleMonth, setVisibleMonth] = useState(() => {
@@ -75,9 +83,19 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
   const dayIncome = dailyTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const dayExpense = dailyTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
 
-  const formattedDate = selectedDate
-    ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-    : '';
+  // Título del día: "Hoy" o el día de la semana; debajo, "20 de septiembre"
+  const selectedDateObj = new Date(selectedDate + 'T12:00:00');
+  const dayTitle = selectedDate === today
+    ? 'Hoy'
+    : selectedDateObj.toLocaleDateString('es-ES', { weekday: 'long' });
+  const daySubtitle = selectedDateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  const shortDayLabel = selectedDate === today
+    ? 'hoy'
+    : `el ${selectedDateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
+
+  // Desde el detalle: cerrar la hoja y abrir el formulario / borrar
+  const editFromDetail = (tx) => { setSelectedTx(null); onEdit && onEdit(tx); };
+  const deleteFromDetail = (tx) => { setSelectedTx(null); onDelete && onDelete(tx.id); };
 
   return (
     <View style={styles.container}>
@@ -152,12 +170,8 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
           {/* Day header */}
           <View style={styles.dayHeader}>
             <View>
-              <Text style={styles.dayTitle}>
-                {selectedDate === today ? '📅 Hoy' : formattedDate}
-              </Text>
-              {selectedDate !== today && (
-                <Text style={styles.daySubtitle}>{formattedDate}</Text>
-              )}
+              <Text style={styles.dayTitle}>{dayTitle}</Text>
+              <Text style={styles.daySubtitle}>{daySubtitle}</Text>
             </View>
             {dailyTransactions.length > 0 && (
               <View style={styles.dayStats}>
@@ -208,6 +222,18 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
               );
             })
           )}
+
+          {/* Añadir directamente en el día seleccionado */}
+          {onAddForDate && (
+            <TouchableOpacity
+              style={styles.addDayBtn}
+              onPress={() => onAddForDate(selectedDate)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={20} color={THEME.colors.accent} />
+              <Text style={styles.addDayBtnText}>Añadir movimiento {shortDayLabel}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -223,7 +249,8 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
           activeOpacity={1}
           onPress={() => setSelectedTx(null)}
         >
-          <View style={styles.modalSheet}>
+          {/* La hoja captura sus propios toques para no cerrarse al tocar dentro */}
+          <TouchableOpacity activeOpacity={1} style={styles.modalSheet} onPress={() => {}}>
             {/* Handle */}
             <View style={styles.modalHandle} />
 
@@ -259,13 +286,27 @@ export default function CalendarScreen({ transactions, categories, incomeCategor
                     ))}
                   </View>
 
-                  <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setSelectedTx(null)}>
-                    <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                  <View style={styles.modalActions}>
+                    {onDelete && (
+                      <TouchableOpacity style={[styles.modalActionBtn, styles.modalDeleteBtn]} onPress={() => deleteFromDetail(selectedTx)}>
+                        <Ionicons name="trash-outline" size={18} color={THEME.colors.error} />
+                        <Text style={[styles.modalActionText, { color: THEME.colors.error }]}>Borrar</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onEdit && (
+                      <TouchableOpacity style={[styles.modalActionBtn, styles.modalEditBtn]} onPress={() => editFromDetail(selectedTx)}>
+                        <Ionicons name="pencil" size={18} color="#FFF" />
+                        <Text style={[styles.modalActionText, { color: '#FFF' }]}>Editar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity style={styles.modalCloseLink} onPress={() => setSelectedTx(null)}>
+                    <Text style={styles.modalCloseLinkText}>Cerrar</Text>
                   </TouchableOpacity>
                 </>
               );
             })()}
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </View>
@@ -377,7 +418,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: THEME.colors.textSecondary,
     marginTop: 2,
-    textTransform: 'capitalize',
   },
   dayStats: {
     alignItems: 'flex-end',
@@ -510,15 +550,58 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
   },
-  modalCloseBtn: {
-    backgroundColor: THEME.colors.accent,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  modalCloseBtnText: {
-    color: '#FFF',
+  modalActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 15,
+  },
+  modalDeleteBtn: {
+    backgroundColor: THEME.colors.error + '12',
+    borderWidth: 1,
+    borderColor: THEME.colors.error + '40',
+  },
+  modalEditBtn: {
+    backgroundColor: THEME.colors.accent,
+  },
+  modalActionText: {
     fontSize: 15,
+    fontWeight: '800',
+  },
+  modalCloseLink: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  modalCloseLinkText: {
+    color: THEME.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Botón "Añadir movimiento" del panel del día
+  addDayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: THEME.colors.accent + '70',
+    backgroundColor: THEME.colors.accent + '10',
+  },
+  addDayBtnText: {
+    color: THEME.colors.accent,
+    fontSize: 14,
     fontWeight: '800',
   },
 });
