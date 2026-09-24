@@ -21,13 +21,15 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
 
   React.useEffect(() => {
     if (initialData) {
-      setDescription(initialData.description);
-      setAmount(initialData.amount.toString());
-      setType(initialData.type);
-      setCategory(initialData.type === 'income' ? 'Ingreso' : initialData.category);
-      setIsShared(initialData.isShared);
-      setMyPart(initialData.myPart.toString());
-      setDate(new Date(initialData.date));
+      // Defensivo: movimientos de versiones antiguas pueden no tener todos los campos
+      const txType = initialData.type === 'income' ? 'income' : 'expense';
+      setDescription(initialData.description || '');
+      setAmount(initialData.amount != null ? String(initialData.amount) : '');
+      setType(txType);
+      setCategory(txType === 'income' ? 'Ingreso' : (initialData.category || ''));
+      setIsShared(!!initialData.isShared);
+      setMyPart(initialData.myPart != null ? String(initialData.myPart) : '');
+      setDate(isValidDate(initialData.date) ? new Date(initialData.date) : new Date());
     } else {
       resetForm();
     }
@@ -41,7 +43,15 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     }
 
     const totalAmount = parseFloat(normalizedAmount);
+    if (totalAmount <= 0) {
+      showAlert('Importe no válido', 'El importe tiene que ser mayor que 0');
+      return;
+    }
     const myPartValue = (type === 'expense' && isShared) ? parseFloat(myPart.replace(',', '.') || normalizedAmount) : totalAmount;
+    if (isNaN(myPartValue) || myPartValue > totalAmount) {
+      showAlert('Tu parte no es válida', 'Tu parte no puede ser mayor que el importe total');
+      return;
+    }
     const refund = (type === 'expense' && isShared) ? Math.max(0, totalAmount - myPartValue) : 0;
 
     const newTx = {
