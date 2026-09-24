@@ -6,7 +6,6 @@ import { THEME } from '../constants/theme';
 import { getCategoryColor, getCategoryIcon } from '../logic/helpers';
 import { toLocalDateKey } from '../logic/dates';
 
-const TOP = THEME.layout.screenTop;
 
 LocaleConfig.locales['es'] = {
   monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
@@ -35,14 +34,6 @@ export default function CalendarScreen({
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
-  const isCurrentMonth = (() => {
-    const now = new Date();
-    return visibleMonth.year === now.getFullYear() && visibleMonth.month === now.getMonth();
-  })();
-  const visibleMonthLabel = isCurrentMonth
-    ? 'este mes'
-    : `${LocaleConfig.locales['es'].monthNames[visibleMonth.month].toLowerCase()} ${visibleMonth.year}`;
-
   const monthTransactions = useMemo(() =>
     (transactions || []).filter(t => {
       if (!t.date) return false;
@@ -99,20 +90,6 @@ export default function CalendarScreen({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Calendario</Text>
-          <Text style={styles.headerSub}>Vista mensual</Text>
-        </View>
-        <View style={styles.headerBadge}>
-          <Text style={[styles.headerBalance, { color: monthBalance >= 0 ? THEME.colors.success : THEME.colors.error }]}>
-            {monthBalance >= 0 ? '+' : ''}{monthBalance.toFixed(0)}€
-          </Text>
-          <Text style={styles.headerBalanceLabel}>{visibleMonthLabel}</Text>
-        </View>
-      </View>
-
       {/* Month KPI strip */}
       <View style={styles.kpiStrip}>
         <View style={styles.kpiItem}>
@@ -128,9 +105,11 @@ export default function CalendarScreen({
         </View>
         <View style={styles.kpiDivider} />
         <View style={styles.kpiItem}>
-          <Ionicons name="receipt-outline" size={14} color={THEME.colors.textSecondary} />
-          <Text style={styles.kpiLabel}>Movimientos</Text>
-          <Text style={[styles.kpiValue, { color: '#FFF' }]}>{monthTransactions.length}</Text>
+          <Ionicons name="wallet-outline" size={14} color={THEME.colors.textSecondary} />
+          <Text style={styles.kpiLabel}>Balance</Text>
+          <Text style={[styles.kpiValue, { color: monthBalance >= 0 ? THEME.colors.textPrimary : THEME.colors.error }]}>
+            {monthBalance >= 0 ? '+' : ''}{monthBalance.toFixed(0)}€
+          </Text>
         </View>
       </View>
 
@@ -144,14 +123,15 @@ export default function CalendarScreen({
               backgroundColor: 'transparent',
               calendarBackground: 'transparent',
               selectedDayBackgroundColor: THEME.colors.accent,
-              selectedDayTextColor: '#FFF',
+              selectedDayTextColor: THEME.colors.onAccent,
               todayTextColor: THEME.colors.accent,
-              dayTextColor: '#E2E8F0',
-              textDisabledColor: '#334155',
+              dayTextColor: THEME.colors.textPrimary,
+              textDisabledColor: THEME.colors.textTertiary,
+              textSectionTitleColor: THEME.colors.textTertiary,
               dotColor: THEME.colors.accent,
-              selectedDotColor: '#FFF',
+              selectedDotColor: THEME.colors.onAccent,
               arrowColor: THEME.colors.accent,
-              monthTextColor: '#FFF',
+              monthTextColor: THEME.colors.textPrimary,
               textDayFontWeight: '600',
               textDayHeaderFontWeight: '700',
               textMonthFontWeight: '800',
@@ -295,8 +275,8 @@ export default function CalendarScreen({
                     )}
                     {onEdit && (
                       <TouchableOpacity style={[styles.modalActionBtn, styles.modalEditBtn]} onPress={() => editFromDetail(selectedTx)}>
-                        <Ionicons name="pencil" size={18} color="#FFF" />
-                        <Text style={[styles.modalActionText, { color: '#FFF' }]}>Editar</Text>
+                        <Ionicons name="pencil" size={18} color={THEME.colors.onAccent} />
+                        <Text style={[styles.modalActionText, { color: THEME.colors.onAccent }]}>Editar</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -318,46 +298,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  header: {
-    paddingTop: TOP,
-    paddingHorizontal: 22,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  headerSub: {
-    fontSize: 12,
-    color: THEME.colors.textSecondary,
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  headerBadge: {
-    alignItems: 'flex-end',
-  },
-  headerBalance: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  headerBalanceLabel: {
-    fontSize: 10,
-    color: THEME.colors.textSecondary,
-    fontWeight: '600',
-    marginTop: 1,
-  },
   kpiStrip: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginBottom: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: THEME.colors.elevated,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: THEME.colors.hairline,
     overflow: 'hidden',
   },
   kpiItem: {
@@ -368,7 +316,7 @@ const styles = StyleSheet.create({
   },
   kpiDivider: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: THEME.colors.hairline,
     marginVertical: 8,
   },
   kpiLabel: {
@@ -411,7 +359,7 @@ const styles = StyleSheet.create({
   dayTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     textTransform: 'capitalize',
   },
   daySubtitle: {
@@ -462,7 +410,7 @@ const styles = StyleSheet.create({
   txDesc: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   txCatChip: {
     alignSelf: 'flex-start',
@@ -486,7 +434,7 @@ const styles = StyleSheet.create({
   // Modal bottom sheet style
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: THEME.colors.scrim,
     justifyContent: 'flex-end',
   },
   modalSheet: {
@@ -547,7 +495,7 @@ const styles = StyleSheet.create({
   },
   modalValue: {
     fontSize: 14,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontWeight: '700',
   },
   modalActions: {

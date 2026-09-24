@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
 import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
+import ScreenHeader from '../components/ScreenHeader';
 
-const TOP = THEME.layout.screenTop;
 
 export default function DataEntryScreen({ transactions, onEdit, onDelete, userName, categories, incomeCategories, onGoToHistory }) {
   const [timeFilter, setTimeFilter] = useState('month');
@@ -50,20 +50,25 @@ export default function DataEntryScreen({ transactions, onEdit, onDelete, userNa
   }, [timeFilter, transactions, balanceAnim]);
 
   const cashFlow = calculateCashFlow(transactions, timeFilter);
+  const firstName = (userName || '').trim().split(/\s+/)[0];
+  // "jueves, 24 de septiembre"
+  const todayLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <View style={styles.container}>
-      {/* Welcome Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brandTitle}>VibeCash</Text>
-          <Text style={styles.signatureText}>por Javier Lacarra Rubio</Text>
-          <Text style={styles.userName}>¡Hola, {userName || 'Usuario'}!</Text>
-        </View>
-        <TouchableOpacity style={styles.topIconBtn} onPress={onGoToHistory}>
-          <Ionicons name="search-outline" size={24} color={THEME.colors.accent} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        eyebrow={todayLabel}
+        title={`Hola, ${firstName || 'de nuevo'}`}
+        right={
+          <TouchableOpacity
+            style={styles.topIconBtn}
+            onPress={onGoToHistory}
+            accessibilityLabel="Buscar movimientos"
+          >
+            <Ionicons name="search-outline" size={20} color={THEME.colors.ink} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
         {/* Giant Balance Hero */}
@@ -75,7 +80,7 @@ export default function DataEntryScreen({ transactions, onEdit, onDelete, userNa
             <Ionicons 
               name={showBalance ? "eye-outline" : "eye-off-outline"} 
               size={18} 
-              color="rgba(255,255,255,0.6)" 
+              color={THEME.colors.onAccent} 
             />
           </TouchableOpacity>
 
@@ -89,7 +94,7 @@ export default function DataEntryScreen({ transactions, onEdit, onDelete, userNa
               { 
                 opacity: balanceAnim, 
                 transform: [{ scale: balanceAnim }],
-                color: cashFlow.netBalance >= 0 ? '#4ADE80' : '#FC8181' 
+                color: THEME.colors.onAccent 
               }
             ]}>
               {displayBalance >= 0 ? '+' : ''}{displayBalance.toFixed(2)}€
@@ -197,42 +202,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 25,
-    paddingTop: TOP,
-    paddingBottom: 20,
-  },
-  brandTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 1,
-  },
-  signatureText: {
-    fontSize: 10,
-    color: THEME.colors.accent,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginTop: -2,
-    marginBottom: 4,
-  },
-  userName: {
-    color: THEME.colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
   topIconBtn: {
-    width: 45,
-    height: 45,
-    borderRadius: 15,
-    backgroundColor: THEME.colors.surface,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: THEME.colors.hairline,
   },
   scrollContainer: {
     paddingHorizontal: 20,
@@ -250,7 +227,7 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   heroLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: THEME.colors.onAccent,
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
@@ -272,13 +249,13 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
   blurredBalanceText: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontSize: 48,
     fontWeight: '900',
     letterSpacing: 8,
   },
   heroAmount: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontSize: 48,
     fontWeight: '900',
     textAlign: 'center',
@@ -290,7 +267,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: 'rgba(247, 243, 234, 0.2)',
   },
   heroStat: {
     flexDirection: 'row',
@@ -298,12 +275,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroStatLabel: {
-    color: 'rgba(255,255,255,0.6)',
+    color: THEME.colors.onAccent,
     fontSize: 11,
     fontWeight: '600',
   },
   heroStatValue: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -331,7 +308,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   filterChipTextActive: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
   },
   historyList: {
     marginTop: 35,

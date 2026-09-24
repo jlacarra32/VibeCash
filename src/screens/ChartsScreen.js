@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
+import ScreenHeader from '../components/ScreenHeader';
 
 const TOP = THEME.layout.screenTop;
 
@@ -42,7 +43,7 @@ const horizStyles = StyleSheet.create({
   track: {
     flex: 1,
     height: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: THEME.colors.sunken,
     borderRadius: 6,
     overflow: 'hidden',
   },
@@ -68,12 +69,12 @@ function KpiCard({ icon, label, value, color, sub }) {
 
 const kpiStyles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: THEME.colors.elevated,
     borderRadius: 18,
     padding: 16,
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: THEME.colors.hairline,
     alignItems: 'flex-start',
     minWidth: 130,
   },
@@ -122,7 +123,7 @@ const filterStyles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: THEME.colors.hairline,
   },
   pillActive: {
     backgroundColor: THEME.colors.accent,
@@ -134,7 +135,7 @@ const filterStyles = StyleSheet.create({
     color: THEME.colors.textSecondary,
   },
   labelActive: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
   },
 });
 
@@ -160,7 +161,7 @@ export default function ChartsScreen({ transactions, categories }) {
     cashFlow.totalIncome > 0
       ? ((cashFlow.totalIncome - displayExpense) / cashFlow.totalIncome) * 100
       : 0;
-  const savingsColor = savingsRate < 0 ? THEME.colors.error : THEME.colors.warning;
+  const savingsColor = savingsRate < 0 ? THEME.colors.error : THEME.colors.success;
 
   const txCount = (transactions || []).filter(t => {
     if (timeFilter === 'all') return true;
@@ -195,24 +196,23 @@ export default function ChartsScreen({ transactions, categories }) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Análisis</Text>
-          <Text style={styles.headerSub}>Tu dinero en detalle</Text>
-        </View>
-        {/* Net / Bruto toggle */}
-        <TouchableOpacity
-          style={styles.modeToggle}
-          onPress={() => setNetMode(p => !p)}
-        >
-          <Ionicons
-            name={netMode ? 'git-network-outline' : 'cash-outline'}
-            size={14}
-            color={THEME.colors.accent}
-          />
-          <Text style={styles.modeToggleText}>{netMode ? 'Neto' : 'Bruto'}</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Análisis"
+        right={
+          // Net / Bruto toggle
+          <TouchableOpacity
+            style={styles.modeToggle}
+            onPress={() => setNetMode(p => !p)}
+          >
+            <Ionicons
+              name={netMode ? 'git-network-outline' : 'cash-outline'}
+              size={14}
+              color={THEME.colors.accent}
+            />
+            <Text style={styles.modeToggleText}>{netMode ? 'Neto' : 'Bruto'}</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {/* Time filter row */}
       <View style={styles.filterRow}>
@@ -406,25 +406,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 25,
-    paddingTop: TOP,
-    paddingBottom: 16,
-  },
-  headerTitle: {
-    color: THEME.colors.textPrimary,
-    fontSize: 26,
-    fontWeight: '800',
-  },
-  headerSub: {
-    color: THEME.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2,
-  },
   modeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -455,10 +436,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: THEME.colors.elevated,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: THEME.colors.hairline,
     padding: 20,
     marginTop: 16,
   },
@@ -471,7 +452,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     marginBottom: 20,
   },
   topBadge: {
@@ -516,7 +497,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   // Category
   catRow: {
@@ -539,7 +520,7 @@ const styles = StyleSheet.create({
   catName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   catAmount: {
     fontSize: 14,
@@ -584,7 +565,7 @@ const styles = StyleSheet.create({
   distName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   distPct: {
     fontSize: 11,

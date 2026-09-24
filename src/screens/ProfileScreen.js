@@ -4,13 +4,13 @@ import {
   ScrollView, Modal, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../constants/theme';
+import { THEME, CATEGORY_COLORS as COLORS } from '../constants/theme';
 import { showAlert, confirmAction } from '../logic/dialogs';
 import appConfig from '../../app.json';
+import ScreenHeader from '../components/ScreenHeader';
 
 const APP_VERSION = appConfig.expo.version;
 
-const TOP = THEME.layout.screenTop;
 
 const ICON_MAP = {
   // Ingresos
@@ -69,7 +69,7 @@ const getSmartIcon = (name, type) => {
   return type === 'income' ? 'cash-outline' : 'cart-outline';
 };
 
-const COLORS = ['#8B5CF6','#EC4899','#F43F5E','#10B981','#3B82F6','#F59E0B','#64748B','#06B6D4','#84CC16','#F97316'];
+
 
 export default function ProfileScreen({
   userName, setUserName, setTransactions,
@@ -80,7 +80,7 @@ export default function ProfileScreen({
   const [tempName, setTempName] = useState(userName || '');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newCatName, setNewCatName] = useState('');
-  const [newCatColor, setNewCatColor] = useState(THEME.colors.accent);
+  const [newCatColor, setNewCatColor] = useState(COLORS[0]);
   const newCatType = 'expense'; // Forzado a gasto
 
   const handleUpdate = () => {
@@ -92,7 +92,7 @@ export default function ProfileScreen({
   const closeAddModal = () => {
     setIsAddModalVisible(false);
     setNewCatName('');
-    setNewCatColor(THEME.colors.accent);
+    setNewCatColor(COLORS[0]);
   };
 
   const handleAddCategory = () => {
@@ -115,10 +115,7 @@ export default function ProfileScreen({
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mi Perfil</Text>
-        <Text style={styles.headerSub}>Gestiona tu cuenta y preferencias</Text>
-      </View>
+      <ScreenHeader title="Ajustes" />
 
       {/* Avatar hero */}
       <View style={styles.heroCard}>
@@ -167,7 +164,7 @@ export default function ProfileScreen({
             placeholderTextColor={THEME.colors.textSecondary}
           />
           <TouchableOpacity style={styles.primaryBtn} onPress={handleUpdate}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#FFF" />
+            <Ionicons name="checkmark-circle-outline" size={18} color={THEME.colors.onAccent} />
             <Text style={styles.primaryBtnText}>Guardar nombre</Text>
           </TouchableOpacity>
         </View>
@@ -308,7 +305,7 @@ export default function ProfileScreen({
                   style={[styles.colorCircle, { backgroundColor: c }, newCatColor === c && styles.colorCircleActive]}
                   onPress={() => setNewCatColor(c)}
                 >
-                  {newCatColor === c && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                  {newCatColor === c && <Ionicons name="checkmark" size={14} color={THEME.colors.onAccent} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -347,22 +344,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.colors.background,
-  },
-  header: {
-    paddingTop: TOP,
-    paddingHorizontal: 22,
-    paddingBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  headerSub: {
-    fontSize: 13,
-    color: THEME.colors.textSecondary,
-    marginTop: 2,
-    fontWeight: '500',
   },
   // Hero
   heroCard: {
@@ -403,7 +384,7 @@ const styles = StyleSheet.create({
   heroName: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     marginBottom: 4,
   },
   heroSub: {
@@ -430,7 +411,7 @@ const styles = StyleSheet.create({
   heroStatVal: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   heroStatLabel: {
     fontSize: 10,
@@ -458,7 +439,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   sectionSub: {
     fontSize: 12,
@@ -470,7 +451,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.background,
     borderRadius: 14,
     padding: 14,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 15,
     borderWidth: 1,
     borderColor: THEME.colors.border,
@@ -486,7 +467,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryBtnText: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -527,7 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: THEME.colors.elevated,
     gap: 6,
   },
   catCardIcon: {
@@ -577,7 +558,7 @@ const styles = StyleSheet.create({
   dangerRowTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     marginBottom: 2,
   },
   dangerRowSub: {
@@ -591,7 +572,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: THEME.colors.hairline,
   },
   infoLabel: {
     flex: 1,
@@ -601,13 +582,13 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 13,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontWeight: '700',
   },
   // Modal bottom sheet
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: THEME.colors.scrim,
     justifyContent: 'flex-end',
   },
   modalSheet: {
@@ -630,7 +611,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -665,7 +646,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.background,
     borderRadius: 14,
     padding: 14,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 15,
     borderWidth: 1,
     borderColor: THEME.colors.border,
@@ -694,7 +675,7 @@ const styles = StyleSheet.create({
   },
   colorCircleActive: {
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: THEME.colors.ink,
   },
   previewRow: {
     flexDirection: 'row',
@@ -723,7 +704,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalBtnCancel: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: THEME.colors.sunken,
     borderWidth: 1,
     borderColor: THEME.colors.border,
   },
@@ -733,7 +714,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   modalBtnText: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontWeight: '800',
     fontSize: 14,
   },

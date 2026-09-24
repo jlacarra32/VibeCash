@@ -4,9 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
 
-const TOP = THEME.layout.screenTop;
 
-export default function HistoryScreen({ transactions, categories, incomeCategories, onEdit, onDelete, onBack }) {
+export default function HistoryScreen({ transactions, categories, incomeCategories, onEdit, onDelete }) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -32,15 +31,6 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Explorador</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
       {/* Summary strip */}
       <View style={styles.summaryStrip}>
         <View style={styles.summaryItem}>
@@ -94,7 +84,7 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
               <Ionicons
                 name={f.icon}
                 size={14}
-                color={typeFilter === f.key ? '#FFF' : THEME.colors.textSecondary}
+                color={typeFilter === f.key ? THEME.colors.onAccent : THEME.colors.textSecondary}
               />
               <Text style={[styles.typeChipText, typeFilter === f.key && styles.typeChipTextActive]}>
                 {f.label}
@@ -197,37 +187,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
-  header: {
-    paddingTop: TOP,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: THEME.colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFF',
-  },
   summaryStrip: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginBottom: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: THEME.colors.elevated,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: THEME.colors.hairline,
     overflow: 'hidden',
   },
   summaryItem: {
@@ -237,7 +204,7 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: THEME.colors.hairline,
     marginVertical: 8,
   },
   summaryLabel: {
@@ -255,7 +222,7 @@ const styles = StyleSheet.create({
   summaryValueNeutral: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -271,7 +238,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 15,
   },
   typeFilterRow: {
@@ -302,7 +269,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   typeChipTextActive: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
   },
   // Category grid
   catSection: {

@@ -32,8 +32,8 @@ const manifest = {
   start_url: '/',
   display: 'standalone',
   orientation: 'portrait',
-  background_color: '#0F172A',
-  theme_color: '#8B5CF6', // mismo violeta que THEME.colors.accent
+  background_color: '#F4EFE6', // THEME.colors.paper
+  theme_color: '#F4EFE6', // mismo papel que el fondo de la app
   // Los tres archivos son copias de assets/images/icon.png (640x640): se
   // declara su tamaño real. Se mantienen los nombres de archivo para no
   // romper las instalaciones existentes.
@@ -57,7 +57,7 @@ let html = fs.readFileSync(indexPath, 'utf-8');
 const PWA_TAGS = `
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="VibeCash">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">

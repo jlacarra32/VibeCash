@@ -34,3 +34,29 @@ export const getCategoryColor = (catId, type, categories, incomeCategories) => {
   const cat = list.find(c => c.id === catId);
   return cat ? cat.color : (type === 'income' ? THEME.colors.success : THEME.colors.textSecondary);
 };
+
+// Colores de la paleta antigua (Tailwind) -> su equivalente apagado.
+// Las categorías guardadas conservan su color original; solo cambia cómo se pinta.
+const LEGACY_COLOR_MAP = {
+  '#F97316': '#B5562F', // naranja -> terracota
+  '#EC4899': '#9E4A6B', // rosa -> ciruela rosada
+  '#3B82F6': '#3F5E7A', // azul -> azul pizarra
+  '#10B981': '#4F7A5A', // esmeralda -> salvia
+  '#94A3B8': '#8A8272', // gris pizarra -> arena
+  '#8B5CF6': '#6A4E7E', // violeta -> ciruela
+  '#F43F5E': '#A34A45', // rosa fuerte -> teja
+  '#F59E0B': '#B0832A', // ámbar -> ocre
+  '#64748B': '#5F5B52', // gris -> grafito
+  '#06B6D4': '#3E7C7E', // cian -> petróleo
+  '#84CC16': '#7A8A3A', // lima -> oliva
+};
+
+/** Color con el que se pinta una categoría (convierte los colores antiguos). */
+export const displayColor = (hex) => {
+  if (typeof hex !== 'string') return THEME.colors.textSecondary;
+  return LEGACY_COLOR_MAP[hex.toUpperCase()] || hex;
+};
+
+/** Copia de las categorías con el color de pintado; no modifica lo guardado. */
+export const withDisplayColors = (categories) =>
+  (categories || []).map(c => ({ ...c, color: displayColor(c.color) }));

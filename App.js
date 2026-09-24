@@ -1,16 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
+import { useFonts } from 'expo-font';
+import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
+import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { THEME, CATEGORIES, INCOME_CATEGORIES } from './src/constants/theme';
 import DataEntryScreen from './src/screens/DataEntryScreen';
 import ChartsScreen from './src/screens/ChartsScreen';
-import CalendarScreen from './src/screens/CalendarScreen';
-import HistoryScreen from './src/screens/HistoryScreen';
+import MovementsScreen from './src/screens/MovementsScreen';
 import { showAlert, confirmAction } from './src/logic/dialogs';
 import { fromLocalDateKey } from './src/logic/dates';
+import { withDisplayColors } from './src/logic/helpers';
 
 // Memoria de emergencia por si el móvil bloquea el almacenamiento
 let backupStorage = {};
@@ -60,8 +67,22 @@ const loadData = async (key) => {
 import AddTransactionModal from './src/components/AddTransactionModal';
 import ProfileScreen from './src/screens/ProfileScreen';
 
+// Pestañas de la barra inferior
+const TABS = [
+  { key: 'DataEntry', label: 'Inicio', icon: 'home' },
+  { key: 'Movements', label: 'Movimientos', icon: 'list' },
+  { key: 'Charts', label: 'Análisis', icon: 'pie-chart' },
+  { key: 'Profile', label: 'Ajustes', icon: 'settings' },
+];
+
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    Fraunces_400Regular, Fraunces_400Regular_Italic, Fraunces_600SemiBold,
+    Inter_400Regular, Inter_500Medium, Inter_600SemiBold,
+  });
   const [currentScreen, setCurrentScreen] = useState('DataEntry');
+  // Vista dentro de "Movimientos": 'list' o 'calendar'
+  const [movementsView, setMovementsView] = useState('list');
   const screenOpacity = useRef(new Animated.Value(1)).current;
 
   // Cambia de pantalla al instante (la pestaña se marca enseguida) y hace un
@@ -131,6 +152,11 @@ export default function App() {
     if (!isLoaded) return;
     saveData('has_seen_welcome', hasSeenWelcome);
   }, [hasSeenWelcome, isLoaded]);
+
+  // Categorías con los colores de la paleta nueva, solo para pintarlas.
+  // Lo guardado (categories) no cambia.
+  const displayCategories = useMemo(() => withDisplayColors(categories), [categories]);
+  const displayIncomeCategories = useMemo(() => withDisplayColors(incomeCategories), [incomeCategories]);
 
   const handleSaveTransaction = (tx) => {
     setTransactions(prev => {
@@ -202,116 +228,94 @@ export default function App() {
     );
   };
 
+  // Mientras cargan las fuentes se muestra solo el fondo (evita un parpadeo
+  // con la tipografía del sistema). Si fallan, se sigue con la del sistema.
+  if (!fontsLoaded && !fontError) {
+    return <View style={styles.container} />;
+  }
+
+  // El "+" usa el día elegido si se está viendo el calendario
+  const addUsesCalendarDate = currentScreen === 'Movements' && movementsView === 'calendar';
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'right', 'left', 'bottom']}>
-        <StatusBar barStyle="light-content" backgroundColor={THEME.colors.background} />
-        
-        {/* Screen Content */}
-        <Animated.View style={[styles.content, { opacity: screenOpacity }]}>
-          {currentScreen === 'DataEntry' 
-            ? <DataEntryScreen 
-                transactions={transactions}
-                onEdit={openEditModal}
-                onDelete={handleDeleteTransaction}
-                userName={userName}
-                categories={categories}
-                incomeCategories={incomeCategories}
-                onGoToHistory={() => navigate('History')}
-              /> 
-            : currentScreen === 'Charts'
-            ? <ChartsScreen transactions={transactions} categories={categories} />
-            : currentScreen === 'Calendar'
-            ? <CalendarScreen
-                transactions={transactions}
-                categories={categories}
-                incomeCategories={incomeCategories}
-                onAddForDate={openAddModal}
-                onSelectedDateChange={(dateKey) => { calendarDateRef.current = dateKey; }}
-                onEdit={openEditModal}
-                onDelete={handleDeleteTransaction}
-              />
-            : currentScreen === 'History'
-            ? <HistoryScreen 
-                transactions={transactions} 
-                categories={categories} 
-                incomeCategories={incomeCategories} 
-                onEdit={openEditModal}
-                onDelete={handleDeleteTransaction}
-                onBack={() => navigate('DataEntry')}
-              />
-            : <ProfileScreen 
-                userName={userName} 
-                setUserName={setUserName} 
-                setTransactions={setTransactions} 
-                categories={categories}
-                setCategories={setCategories}
-                incomeCategories={incomeCategories}
-                setIncomeCategories={setIncomeCategories}
-                onFullReset={handleFullReset}
-              />
-          }
-        </Animated.View>
+        <StatusBar barStyle="dark-content" backgroundColor={THEME.colors.background} />
 
-        {/* Bottom Navigation Bar */}
-        <View style={styles.navBar}>
-          <TouchableOpacity 
-            style={styles.navBtn}
-            onPress={() => navigate('DataEntry')}
-          >
-            <Ionicons 
-              name={currentScreen === 'DataEntry' ? 'home' : 'home-outline'} 
-              size={24} 
-              color={currentScreen === 'DataEntry' ? THEME.colors.accent : THEME.colors.textSecondary} 
-            />
-            <Text style={[styles.navBtnText, currentScreen === 'DataEntry' && { color: THEME.colors.accent }]}>Inicio</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.navBtn}
-            onPress={() => navigate('Charts')}
-          >
-            <Ionicons 
-              name={currentScreen === 'Charts' ? 'stats-chart' : 'stats-chart-outline'} 
-              size={24} 
-              color={currentScreen === 'Charts' ? THEME.colors.accent : THEME.colors.textSecondary} 
-            />
-            <Text style={[styles.navBtnText, currentScreen === 'Charts' && { color: THEME.colors.accent }]}>Análisis</Text>
-          </TouchableOpacity>
+        <View style={styles.content}>
+          <Animated.View style={[styles.content, { opacity: screenOpacity }]}>
+            {currentScreen === 'DataEntry'
+              ? <DataEntryScreen
+                  transactions={transactions}
+                  onEdit={openEditModal}
+                  onDelete={handleDeleteTransaction}
+                  userName={userName}
+                  categories={displayCategories}
+                  incomeCategories={displayIncomeCategories}
+                  onGoToHistory={() => { setMovementsView('list'); navigate('Movements'); }}
+                />
+              : currentScreen === 'Charts'
+              ? <ChartsScreen transactions={transactions} categories={displayCategories} />
+              : currentScreen === 'Movements'
+              ? <MovementsScreen
+                  view={movementsView}
+                  onViewChange={setMovementsView}
+                  transactions={transactions}
+                  categories={displayCategories}
+                  incomeCategories={displayIncomeCategories}
+                  onAddForDate={openAddModal}
+                  onSelectedDateChange={(dateKey) => { calendarDateRef.current = dateKey; }}
+                  onEdit={openEditModal}
+                  onDelete={handleDeleteTransaction}
+                />
+              : <ProfileScreen
+                  userName={userName}
+                  setUserName={setUserName}
+                  setTransactions={setTransactions}
+                  categories={displayCategories}
+                  setCategories={setCategories}
+                  incomeCategories={displayIncomeCategories}
+                  setIncomeCategories={setIncomeCategories}
+                  onFullReset={handleFullReset}
+                />
+            }
+          </Animated.View>
 
-          {/* Central Add Button */}
-          <View style={styles.fabContainer}>
-            <TouchableOpacity 
-              style={styles.fabBtn}
-              onPress={() => openAddModal(currentScreen === 'Calendar' ? calendarDateRef.current : null)}
+          {/* Botón para añadir (no aparece en Ajustes) */}
+          {currentScreen !== 'Profile' && (
+            <TouchableOpacity
+              style={styles.addBtn}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Añadir movimiento"
+              onPress={() => openAddModal(addUsesCalendarDate ? calendarDateRef.current : null)}
             >
-              <Ionicons name="add" size={32} color="#FFF" />
+              <Ionicons name="add" size={28} color={THEME.colors.onAccent} />
             </TouchableOpacity>
-          </View>
+          )}
+        </View>
 
-          <TouchableOpacity 
-            style={styles.navBtn}
-            onPress={() => navigate('Calendar')}
-          >
-            <Ionicons 
-              name={currentScreen === 'Calendar' ? 'calendar' : 'calendar-outline'} 
-              size={24} 
-              color={currentScreen === 'Calendar' ? THEME.colors.accent : THEME.colors.textSecondary} 
-            />
-            <Text style={[styles.navBtnText, currentScreen === 'Calendar' && { color: THEME.colors.accent }]}>Calendario</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navBtn}
-            onPress={() => navigate('Profile')}
-          >
-            <Ionicons 
-              name={currentScreen === 'Profile' ? 'person' : 'person-outline'} 
-              size={24} 
-              color={currentScreen === 'Profile' ? THEME.colors.accent : THEME.colors.textSecondary} 
-            />
-            <Text style={[styles.navBtnText, currentScreen === 'Profile' && { color: THEME.colors.accent }]}>Perfil</Text>
-          </TouchableOpacity>
+        {/* Barra inferior */}
+        <View style={styles.navBar}>
+          {TABS.map(tab => {
+            const active = currentScreen === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={styles.navBtn}
+                onPress={() => navigate(tab.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Ionicons
+                  name={active ? tab.icon : `${tab.icon}-outline`}
+                  size={22}
+                  color={active ? THEME.colors.ink : THEME.colors.inkFaint}
+                />
+                <Text style={[styles.navBtnText, active && styles.navBtnTextActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Onboarding Overlay */}
@@ -324,7 +328,6 @@ export default function App() {
                     <Text style={{ fontSize: 60 }}>💰</Text>
                   </View>
                   <Text style={styles.onboardingTitle}>Bienvenido a VibeCash</Text>
-                  <Text style={styles.signatureBadge}>By Javier Lacarra Rubio</Text>
                   <Text style={styles.onboardingSub}>
                     Controla tus gastos con estilo. Una aplicación diseñada para que gestionar tu dinero sea tan vibrante como tu vida.
                   </Text>
@@ -407,8 +410,8 @@ export default function App() {
           onSave={handleSaveTransaction} 
           initialData={editingTransaction}
           defaultDate={newTxDate}
-          categories={categories}
-          incomeCategories={incomeCategories}
+          categories={displayCategories}
+          incomeCategories={displayIncomeCategories}
         />
         {Platform.OS === 'web' && <Analytics />}
       </SafeAreaView>
@@ -426,51 +429,46 @@ const styles = StyleSheet.create({
   },
   navBar: {
     flexDirection: 'row',
-    backgroundColor: THEME.colors.surface,
-    paddingBottom: 15, // el hueco de la barra de gestos lo añade SafeAreaView
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: THEME.colors.border,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: THEME.colors.elevated,
+    paddingTop: 10,
+    paddingBottom: 8, // el hueco de la barra de gestos lo añade SafeAreaView
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: THEME.colors.hairline,
   },
   navBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 2,
   },
   navBtnText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.textSecondary,
-    marginTop: 5,
+    fontFamily: THEME.fonts.medium,
+    fontSize: 11,
+    color: THEME.colors.inkFaint,
+    marginTop: 4,
   },
-  fabContainer: {
-    width: 65,
-    height: 65,
-    marginTop: -45, // Levanta el botón central
-    alignItems: 'center',
-    justifyContent: 'center',
+  navBtnTextActive: {
+    color: THEME.colors.ink,
   },
-  fabBtn: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
+  addBtn: {
+    position: 'absolute',
+    right: THEME.layout.gutter,
+    bottom: THEME.space.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: THEME.colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: THEME.colors.accent,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 4,
-    borderColor: THEME.colors.surface,
+    shadowColor: THEME.colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
   },
   onboardingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    backgroundColor: 'rgba(244, 239, 230, 0.97)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
@@ -488,7 +486,7 @@ const styles = StyleSheet.create({
   onboardingTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     marginBottom: 10,
   },
   onboardingSub: {
@@ -502,7 +500,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.background,
     borderRadius: 18,
     padding: 20,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 18,
     borderWidth: 1,
     borderColor: THEME.colors.border,
@@ -518,7 +516,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   onboardingBtnText: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -532,14 +530,6 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     borderWidth: 2,
     borderColor: THEME.colors.accent,
-  },
-  signatureBadge: {
-    fontSize: 10,
-    color: THEME.colors.accent,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 20,
   },
   featureRow: {
     flexDirection: 'row',
@@ -556,7 +546,7 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   featureName: {
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -582,12 +572,12 @@ const styles = StyleSheet.create({
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: THEME.colors.income + '14',
     padding: 15,
     borderRadius: 15,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: THEME.colors.income + '30',
   },
   privacyText: {
     color: THEME.colors.textSecondary,

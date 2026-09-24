@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "aplicaciongastos",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -24,8 +24,8 @@
     "web": {
       "favicon": "./assets/images/favicon.png",
       "icon": "./assets/images/icon.png",
-      "backgroundColor": "#0F172A",
-      "themeColor": "#8B5CF6",
+      "backgroundColor": "#F4EFE6",
+      "themeColor": "#F4EFE6",
       "name": "VibeCash",
       "shortName": "VibeCash",
       "description": "VibeCash - Tu control de gastos con estilo",

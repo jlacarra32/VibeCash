@@ -134,7 +134,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             <TextInput 
               style={styles.input}
               placeholder={type === 'income' ? "¿De dónde viene este dinero?" : "¿En qué lo has gastado?"}
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textTertiary}
               value={description}
               onChangeText={setDescription}
             />
@@ -143,7 +143,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
               <TextInput 
                 style={[styles.input, { flex: 1, marginBottom: 0 }]}
                 placeholder="0.00"
-                placeholderTextColor="#64748B"
+                placeholderTextColor={THEME.colors.textTertiary}
                 keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={(val) => {
@@ -160,7 +160,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                   style={[styles.sharedBtn, isShared && styles.sharedBtnActive]}
                   onPress={() => setIsShared(!isShared)}
                 >
-                  <Ionicons name="people" size={20} color={isShared ? '#FFF' : THEME.colors.accent} />
+                  <Ionicons name="people" size={20} color={isShared ? THEME.colors.onAccent : THEME.colors.accent} />
                 </TouchableOpacity>
               )}
             </View>
@@ -169,7 +169,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                <TextInput 
                   style={[styles.input, { marginTop: 15, borderColor: THEME.colors.accent }]}
                   placeholder="Tu parte (Dime solo cuánto pagas tú)"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={THEME.colors.textTertiary}
                   keyboardType="decimal-pad"
                   value={myPart}
                   onChangeText={(val) => {
@@ -194,7 +194,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                       <Ionicons 
                         name={cat.icon || 'cart-outline'} 
                         size={20} 
-                        color={category === cat.id ? cat.color : '#64748B'} 
+                        color={category === cat.id ? cat.color : THEME.colors.textTertiary} 
                       />
                       <Text style={[styles.catText, category === cat.id && { color: cat.color }]}>{cat.id}</Text>
                     </TouchableOpacity>
@@ -224,7 +224,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                 // En web, un <input type="date"> invisible cubre el botón: al
                 // tocarlo se abre el calendario del navegador a la primera
                 <View style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}>
-                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? '#FFF' : THEME.colors.textSecondary} />
+                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? THEME.colors.onAccent : THEME.colors.textSecondary} />
                   <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
                   <input
                     type="date"
@@ -247,7 +247,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                   style={[styles.dateChip, styles.dateChipOther, dateMode === 'other' && styles.dateChipActive]}
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? '#FFF' : THEME.colors.textSecondary} />
+                  <Ionicons name="calendar-outline" size={16} color={dateMode === 'other' ? THEME.colors.onAccent : THEME.colors.textSecondary} />
                   <Text style={[styles.dateChipText, dateMode === 'other' && styles.dateChipTextActive]}>{otherDateLabel}</Text>
                 </TouchableOpacity>
               )}
@@ -259,7 +259,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
                 value={isValidDate(date) ? date : new Date()}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                themeVariant="dark"
+                themeVariant="light"
                 onChange={(event, selectedDate) => {
                   setShowDatePicker(false);
                   if (event?.type !== 'dismissed' && selectedDate) setDate(selectedDate);
@@ -280,7 +280,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: THEME.colors.scrim,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   modalTitle: {
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 20,
     fontWeight: '800',
   },
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   typeRow: {
     flexDirection: 'row',
-    backgroundColor: '#0F172A',
+    backgroundColor: THEME.colors.sunken,
     borderRadius: 18,
     padding: 5,
     marginBottom: 20,
@@ -333,17 +333,17 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.surface,
   },
   typeBtnText: {
-    color: '#64748B',
+    color: THEME.colors.textTertiary,
     fontWeight: '700',
   },
   typeBtnTextActive: {
     color: THEME.colors.accent,
   },
   input: {
-    backgroundColor: '#0F172A',
+    backgroundColor: THEME.colors.sunken,
     borderRadius: 18,
     padding: 18,
-    color: '#FFF',
+    color: THEME.colors.textPrimary,
     fontSize: 16,
     marginBottom: 15,
     borderWidth: 1,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   sharedBtn: {
     width: 60,
     height: 60,
-    backgroundColor: '#0F172A',
+    backgroundColor: THEME.colors.sunken,
     borderRadius: 18,
     marginLeft: 12,
     justifyContent: 'center',
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 15,
-    backgroundColor: '#0F172A',
+    backgroundColor: THEME.colors.sunken,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: THEME.colors.textTertiary,
   },
   dateChips: {
     flexDirection: 'row',
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 13,
     borderRadius: 15,
-    backgroundColor: '#0F172A',
+    backgroundColor: THEME.colors.sunken,
     borderWidth: 1,
     borderColor: THEME.colors.border,
     position: 'relative',
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   dateChipTextActive: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
   },
   dateFull: {
     color: THEME.colors.textSecondary,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   saveBtnText: {
-    color: '#FFF',
+    color: THEME.colors.onAccent,
     fontSize: 18,
     fontWeight: '800',
   },
