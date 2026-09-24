@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, Platfor
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { calculateCashFlow } from '../logic/cashFlow';
-import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
+import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
 
 const TOP = Platform.OS === 'web' ? 20 : 50;
 
@@ -147,7 +147,7 @@ export default function DataEntryScreen({ transactions, onEdit, onDelete, userNa
               <Text style={styles.verTodoLink}>Ver Todo</Text>
             </TouchableOpacity>
           </View>
-          {(cashFlow.transactions || []).slice().reverse().slice(0, 15).map(tx => {
+          {sortByDateDesc(cashFlow.transactions).slice(0, 15).map(tx => {
             const catColor = getCategoryColor(tx.category, tx.type, categories, incomeCategories);
             const catIcon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
             const isIncome = tx.type === 'income';

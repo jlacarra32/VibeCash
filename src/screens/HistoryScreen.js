@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
-import { getCategoryIcon, getCategoryColor } from '../logic/helpers';
+import { getCategoryIcon, getCategoryColor, sortByDateDesc } from '../logic/helpers';
 
 const TOP = Platform.OS === 'web' ? 20 : 50;
 
@@ -12,12 +12,12 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const filteredTransactions = useMemo(() => {
-    return (transactions || []).filter(tx => {
-      const matchesSearch = tx.description.toLowerCase().includes(search.toLowerCase());
+    return sortByDateDesc((transactions || []).filter(tx => {
+      const matchesSearch = (tx.description || '').toLowerCase().includes(search.toLowerCase());
       const matchesType = typeFilter === 'all' || tx.type === typeFilter;
       const matchesCat = !selectedCategory || tx.category === selectedCategory;
       return matchesSearch && matchesType && matchesCat;
-    }).slice().reverse();
+    }));
   }, [transactions, search, typeFilter, selectedCategory]);
 
   const filteredIncome = filteredTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
