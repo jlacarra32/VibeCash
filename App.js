@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -384,6 +385,7 @@ export default function App() {
           incomeCategories={displayIncomeCategories}
         />
         {Platform.OS === 'web' && <Analytics />}
+        {Platform.OS === 'web' && <SpeedInsights />}
       </SafeAreaView>
     </SafeAreaProvider>
   );
