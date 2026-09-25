@@ -5,7 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { exportBackup } from './src/logic/backup';
+import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -215,6 +215,48 @@ export default function App() {
     }
   };
 
+  // Recupera una copia exportada. Sustituye los datos actuales, así que
+  // antes se valida el archivo y se pide confirmación.
+  const handleImport = async () => {
+    let text;
+    try {
+      text = await pickBackupFile();
+    } catch (_e) {
+      showAlert('No disponible', 'Importar datos solo funciona en la versión web de VibeCash.');
+      return;
+    }
+    if (text == null) return;
+
+    const backup = parseBackup(text);
+    if (!backup) {
+      showAlert('Archivo no válido', 'Ese archivo no es una copia de VibeCash. Elige el archivo que exportaste desde Ajustes.');
+      return;
+    }
+
+    const d = backup.data;
+    const count = d.user_transactions.length;
+    const date = new Date(backup.exportedAt);
+    const dateText = isNaN(date.getTime()) ? '' : ` del ${date.toLocaleDateString('es-ES')}`;
+    const replaceText = transactions.length > 0
+      ? ` Se sustituirán tus ${transactions.length} movimientos actuales.`
+      : '';
+
+    confirmAction(
+      'Importar datos',
+      `La copia${dateText} tiene ${count} movimiento${count === 1 ? '' : 's'}.${replaceText} ¿Continuar?`,
+      () => {
+        setTransactions(d.user_transactions);
+        if (d.user_categories) setCategories(d.user_categories);
+        if (d.user_income_categories) setIncomeCategories(d.user_income_categories);
+        const name = d.user_name || userName || tempUserName.trim();
+        if (name) setUserName(name);
+        setHasSeenWelcome(true);
+        showAlert('Datos recuperados', 'Tus datos se han importado correctamente.');
+      },
+      'Importar'
+    );
+  };
+
   // Detalle de un movimiento (hoja con Editar / Borrar), común a todas las pantallas
   const [detailTx, setDetailTx] = useState(null);
 
@@ -283,6 +325,7 @@ export default function App() {
                   setCategories={setCategories}
                   onFullReset={handleFullReset}
                   onExport={() => exportBackup({ transactions, userName, categories, incomeCategories })}
+                  onImport={handleImport}
                 />
             }
           </Animated.View>
@@ -363,6 +406,11 @@ export default function App() {
                 >
                   <Text style={styles.onboardingBtnText}>Empezar</Text>
                 </TouchableOpacity>
+                {Platform.OS === 'web' && (
+                  <TouchableOpacity style={styles.onboardingLink} onPress={handleImport} activeOpacity={0.6}>
+                    <Text style={styles.onboardingLinkText}>¿Ya usabas VibeCash? Importar mis datos</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -503,6 +551,16 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: THEME.radius.md,
     alignItems: 'center',
+  },
+  onboardingLink: {
+    alignItems: 'center',
+    paddingVertical: THEME.space.lg,
+    marginTop: THEME.space.xs,
+  },
+  onboardingLinkText: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: 15,
+    color: THEME.colors.accent,
   },
   onboardingBtnText: {
     fontFamily: THEME.fonts.strong,

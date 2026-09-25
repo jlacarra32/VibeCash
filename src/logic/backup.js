@@ -61,3 +61,47 @@ export const exportBackup = async (state) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return 'downloaded';
 };
+
+/**
+ * Abre el selector de archivos y devuelve el texto del archivo elegido,
+ * o null si se cancela. Solo en web (no hay selector instalado en nativo).
+ * Sin filtro "accept": en iPhone, filtrar por .json a veces deja los
+ * archivos en gris; el contenido se valida después.
+ */
+export const pickBackupFile = () => new Promise((resolve, reject) => {
+  if (Platform.OS !== 'web') {
+    reject(new Error('unsupported'));
+    return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.style.display = 'none';
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    input.remove();
+    if (!file) { resolve(null); return; }
+    try { resolve(await file.text()); } catch (e) { reject(e); }
+  });
+  input.addEventListener('cancel', () => { input.remove(); resolve(null); });
+  document.body.appendChild(input);
+  input.click();
+});
+
+const isCategoryList = (v) => Array.isArray(v) && v.every(c => c && typeof c.id === 'string');
+
+/**
+ * Comprueba que el texto es una copia válida de VibeCash.
+ * Devuelve la copia o null si el archivo no sirve. No toca ningún dato.
+ */
+export const parseBackup = (text) => {
+  let backup;
+  try { backup = JSON.parse(text); } catch (_e) { return null; }
+  if (!backup || backup.app !== 'VibeCash' || !backup.data) return null;
+  const d = backup.data;
+  if (!Array.isArray(d.user_transactions)) return null;
+  if (!d.user_transactions.every(t => t && typeof t === 'object' && t.id != null)) return null;
+  if (d.user_categories != null && !isCategoryList(d.user_categories)) return null;
+  if (d.user_income_categories != null && !isCategoryList(d.user_income_categories)) return null;
+  if (d.user_name != null && typeof d.user_name !== 'string') return null;
+  return backup;
+};

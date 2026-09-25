@@ -72,7 +72,7 @@ const getSmartIcon = (name, type) => {
 export default function ProfileScreen({
   userName, setUserName, setTransactions,
   categories, setCategories,
-  onFullReset, onExport,
+  onFullReset, onExport, onImport,
 }) {
   const [tempName, setTempName] = useState(userName || '');
   // Hoja de categoría: null | { mode: 'new' } | { mode: 'edit', cat }
@@ -204,6 +204,16 @@ export default function ProfileScreen({
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>Exportar mis datos</Text>
               <Text style={styles.rowSub}>Guarda una copia de todo en un archivo</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.row} activeOpacity={0.6} onPress={onImport}>
+            <View style={[styles.catIcon, { backgroundColor: THEME.colors.sunken }]}>
+              <Ionicons name="cloud-upload-outline" size={17} color={THEME.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Importar datos</Text>
+              <Text style={styles.rowSub}>Recupera una copia exportada antes</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
           </TouchableOpacity>
