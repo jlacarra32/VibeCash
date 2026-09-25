@@ -72,7 +72,7 @@ const getSmartIcon = (name, type) => {
 export default function ProfileScreen({
   userName, setUserName, setTransactions,
   categories, setCategories,
-  onFullReset,
+  onFullReset, onExport,
 }) {
   const [tempName, setTempName] = useState(userName || '');
   // Hoja de categoría: null | { mode: 'new' } | { mode: 'edit', cat }
@@ -135,6 +135,17 @@ export default function ProfileScreen({
     );
   };
 
+  const handleExport = async () => {
+    try {
+      const result = await onExport();
+      if (result === 'downloaded') {
+        showAlert('Copia descargada', 'Guarda el archivo en un sitio seguro: lo necesitarás para recuperar tus datos.');
+      }
+    } catch (_e) {
+      showAlert('Error', 'No se pudo exportar la copia de tus datos.');
+    }
+  };
+
   const isNew = sheet && sheet.mode === 'new';
   const previewName = isNew ? catName.trim() : editingCat?.id;
   const previewIcon = isNew ? getSmartIcon(catName || '', 'expense') : (editingCat?.icon || 'cart-outline');
@@ -186,6 +197,16 @@ export default function ProfileScreen({
         {/* Datos */}
         <Text style={styles.groupLabel}>Tus datos</Text>
         <View style={styles.group}>
+          <TouchableOpacity style={styles.row} activeOpacity={0.6} onPress={handleExport}>
+            <View style={[styles.catIcon, { backgroundColor: THEME.colors.sunken }]}>
+              <Ionicons name="download-outline" size={17} color={THEME.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Exportar mis datos</Text>
+              <Text style={styles.rowSub}>Guarda una copia de todo en un archivo</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.row}
             activeOpacity={0.6}
