@@ -14,6 +14,17 @@ const MODES = [
   { key: 'gross', label: 'Total pagado' },
 ];
 
+const PAYMENT_ROWS = [
+  { key: 'card', label: 'Tarjeta', color: THEME.colors.accent },
+  { key: 'cash', label: 'Efectivo', color: THEME.colors.warning },
+  { key: 'none', label: 'Sin indicar', color: THEME.inkAlpha(0.22) },
+];
+
+// Reparto tarjeta / efectivo / sin indicar de unos totales
+const paymentEntries = (totals) => PAYMENT_ROWS
+  .map(r => ({ ...r, val: totals[r.key] }))
+  .filter(r => r.val > 0);
+
 const periodName = (filter, offset, now = new Date()) => {
   if (filter === 'week') return offset === 0 ? 'esta semana' : 'la semana pasada';
   if (filter === 'month') return monthName(new Date(now.getFullYear(), now.getMonth() + offset, 1).getMonth()).toLowerCase();
@@ -61,6 +72,12 @@ export default function ChartsScreen({ transactions, categories }) {
       };
     })
     .sort((a, b) => b.val - a.val);
+
+  // Tarjeta y efectivo: solo si algún movimiento del periodo lo tiene indicado
+  const pay = cashFlow.paymentTotals;
+  const payExpense = paymentEntries(netMode ? pay.expenseNet : pay.expense);
+  const payIncome = paymentEntries(pay.income);
+  const hasPayment = [...payExpense, ...payIncome].some(r => r.key !== 'none');
 
   // Barras del periodo
   const buckets = getPeriodBuckets(timeFilter).map(b => ({ ...b, value: expenseBetween(txs, b.start, b.end, netMode) }));
@@ -152,6 +169,32 @@ export default function ChartsScreen({ transactions, categories }) {
                     </View>
                   );
                 })}
+              </View>
+            )}
+
+            {/* Tarjeta y efectivo */}
+            {hasPayment && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Tarjeta y efectivo</Text>
+                {[
+                  { title: 'Gastos', entries: payExpense, total: spent },
+                  { title: 'Ingresos', entries: payIncome, total: cashFlow.totalIncome },
+                ].filter(g => g.total > 0 && g.entries.some(r => r.key !== 'none')).map(g => (
+                  <View key={g.title} style={styles.payGroup}>
+                    <Text style={styles.payTitle}>{g.title}</Text>
+                    <View style={styles.stackedBar}>
+                      {g.entries.map(e => <View key={e.key} style={{ flex: e.val, backgroundColor: e.color }} />)}
+                    </View>
+                    {g.entries.map((e, i) => (
+                      <View key={e.key} style={[styles.payRow, i < g.entries.length - 1 && styles.catDivider]}>
+                        <View style={[styles.catDot, styles.payDot, { backgroundColor: e.color }]} />
+                        <Text style={styles.catName} numberOfLines={1}>{e.label}</Text>
+                        <Text style={styles.payPct}>{Math.round((e.val / g.total) * 100)} %</Text>
+                        <Text style={styles.catAmount}>{formatMoney(e.val)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
               </View>
             )}
 
@@ -322,6 +365,28 @@ const styles = StyleSheet.create({
     ...THEME.text.small,
     width: 44,
     textAlign: 'right',
+    fontVariant: ['tabular-nums'],
+  },
+  payGroup: {
+    marginBottom: THEME.space.lg,
+  },
+  payTitle: {
+    ...THEME.text.label,
+    marginBottom: THEME.space.sm,
+  },
+  payRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: THEME.space.md,
+  },
+  payDot: {
+    marginTop: 0,
+  },
+  payPct: {
+    ...THEME.text.small,
+    width: 48,
+    textAlign: 'right',
+    marginRight: THEME.space.md,
     fontVariant: ['tabular-nums'],
   },
   bars: {

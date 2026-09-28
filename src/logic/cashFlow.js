@@ -4,6 +4,12 @@ export const calculateCashFlow = (transactions, filterType = 'all') => {
   let totalRefunds = 0; // Lo que te deben/devuelven
   let categoryTotalsRaw = {};
   let categoryTotalsNet = {};
+  // Tarjeta / efectivo / sin indicar (campo opcional paymentMethod)
+  const paymentTotals = {
+    expense: { card: 0, cash: 0, none: 0 },
+    expenseNet: { card: 0, cash: 0, none: 0 },
+    income: { card: 0, cash: 0, none: 0 },
+  };
   
   const now = new Date();
 
@@ -39,12 +45,16 @@ export const calculateCashFlow = (transactions, filterType = 'all') => {
     let amount = Number(t.amount) || 0;
     const isIncome = t.type === 'income';
     const refund = Number(t.refundAmount) || 0;
+    const method = t.paymentMethod === 'card' || t.paymentMethod === 'cash' ? t.paymentMethod : 'none';
     
     if (isIncome) {
       totalIncomeRaw += amount;
+      paymentTotals.income[method] += amount;
     } else {
       totalExpenseRaw += amount;
       totalRefunds += refund;
+      paymentTotals.expense[method] += amount;
+      paymentTotals.expenseNet[method] += amount - refund;
       if (t.category) {
         categoryTotalsRaw[t.category] = (categoryTotalsRaw[t.category] || 0) + amount;
         categoryTotalsNet[t.category] = (categoryTotalsNet[t.category] || 0) + (amount - refund);
@@ -65,7 +75,8 @@ export const calculateCashFlow = (transactions, filterType = 'all') => {
     totalExpenseNet: totalExpenseRaw - totalRefunds,
     netBalance: totalIncomeRaw - (totalExpenseRaw - totalRefunds),
     categoryTotals: categoryTotalsRaw,
-    categoryTotalsNet: categoryTotalsNet
+    categoryTotalsNet: categoryTotalsNet,
+    paymentTotals,
   };
 };
 

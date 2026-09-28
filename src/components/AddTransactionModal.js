@@ -17,6 +17,12 @@ const TYPES = [
   { key: 'income', label: 'Ingreso' },
 ];
 
+// Forma de pago (opcional): se guarda en el campo paymentMethod solo si se elige
+const PAYMENT_METHODS = [
+  { key: 'card', label: 'Tarjeta', icon: 'card-outline' },
+  { key: 'cash', label: 'Efectivo', icon: 'cash-outline' },
+];
+
 // Solo números con un separador decimal (punto o coma)
 const isAmountText = (val) => val === '' || ((val.split(/[.,]/).length - 1) <= 1 && /^\d*[.,]?\d*$/.test(val));
 
@@ -29,6 +35,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
   const [category, setCategory] = useState('Comida');
   const [isShared, setIsShared] = useState(false);
   const [myPart, setMyPart] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(null);
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const amountRef = useRef(null);
@@ -43,6 +50,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       setCategory(txType === 'income' ? 'Ingreso' : (initialData.category || ''));
       setIsShared(!!initialData.isShared);
       setMyPart(initialData.myPart != null ? String(initialData.myPart) : '');
+      setPaymentMethod(initialData.paymentMethod === 'card' || initialData.paymentMethod === 'cash' ? initialData.paymentMethod : null);
       setDate(isValidDate(initialData.date) ? new Date(initialData.date) : new Date());
     } else {
       resetForm();
@@ -105,6 +113,8 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       category: finalCategory,
       date: (isValidDate(date) ? date : new Date()).toISOString(),
     };
+    // Campo nuevo y opcional: los movimientos sin forma de pago quedan igual que siempre
+    if (paymentMethod) newTx.paymentMethod = paymentMethod;
 
     onSave(newTx);
     onClose();
@@ -115,6 +125,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setAmount('');
     setIsShared(false);
     setMyPart('');
+    setPaymentMethod(null);
     setDate(defaultDate && isValidDate(defaultDate) ? new Date(defaultDate) : new Date());
     setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
@@ -179,6 +190,26 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
             </ScrollView>
           </>
         )}
+
+        {/* Forma de pago (opcional; se quita tocando otra vez) */}
+        <Text style={styles.label}>Forma de pago <Text style={styles.optional}>· opcional</Text></Text>
+        <View style={styles.dateRow}>
+          {PAYMENT_METHODS.map(m => {
+            const active = paymentMethod === m.key;
+            return (
+              <TouchableOpacity
+                key={m.key}
+                style={[styles.dateChip, active && styles.dateChipActive]}
+                onPress={() => setPaymentMethod(active ? null : m.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Ionicons name={m.icon} size={15} color={active ? THEME.colors.onAccent : THEME.colors.inkSoft} />
+                <Text style={[styles.dateChipText, active && styles.dateChipTextActive]}>{m.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         {/* Nota */}
         <Text style={styles.label}>Nota</Text>
@@ -334,6 +365,11 @@ const styles = StyleSheet.create({
     ...THEME.text.label,
     marginTop: THEME.space.lg,
     marginBottom: THEME.space.sm,
+  },
+  optional: {
+    textTransform: 'none',
+    letterSpacing: 0,
+    color: THEME.colors.inkFaint,
   },
   chipRow: {
     gap: THEME.space.sm,

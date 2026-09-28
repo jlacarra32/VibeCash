@@ -34,6 +34,8 @@ function Detail({ tx, categories, incomeCategories, onEdit, onDelete }) {
     { label: 'Categoría', value: isIncome ? 'Ingreso' : tx.category },
     { label: 'Fecha', value: formatDateLong(tx.date) },
   ];
+  if (tx.paymentMethod === 'card') rows.push({ label: 'Forma de pago', value: 'Tarjeta' });
+  if (tx.paymentMethod === 'cash') rows.push({ label: 'Forma de pago', value: 'Efectivo' });
   if (!isIncome && tx.isShared) {
     rows.push({ label: 'Tu parte', value: formatMoney(tx.myPart != null ? tx.myPart : amount) });
     if (refund > 0) rows.push({ label: 'Te devuelven', value: formatMoney(refund) });
