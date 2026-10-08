@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { THEME } from '../constants/theme';
 import {
   calculateCashFlow, getPeriodRange, expenseBetween, getPeriodBuckets, PERIOD_OPTIONS,
@@ -25,7 +26,34 @@ const paymentEntries = (totals) => PAYMENT_ROWS
   .map(r => ({ ...r, val: totals[r.key] }))
   .filter(r => r.val > 0);
 
-const periodName = (filter, offset, now = new Date()) => {
+const PIE_SIZE = 140;
+
+// Gráfico circular: un sector por categoría, de mayor a menor desde las 12 en punto
+function PieChart({ entries, total }) {
+  const r = PIE_SIZE / 2;
+  let angle = -Math.PI / 2;
+  return (
+    <Svg width={PIE_SIZE} height={PIE_SIZE}>
+      {entries.length === 1 ? (
+        <Circle cx={r} cy={r} r={r} fill={entries[0].color} />
+      ) : entries.map(e => {
+        const sweep = (e.val / total) * Math.PI * 2;
+        const a0 = angle;
+        const a1 = angle + sweep;
+        angle = a1;
+        const d = [
+          `M ${r} ${r}`,
+          `L ${r + r * Math.cos(a0)} ${r + r * Math.sin(a0)}`,
+          `A ${r} ${r} 0 ${sweep > Math.PI ? 1 : 0} 1 ${r + r * Math.cos(a1)} ${r + r * Math.sin(a1)}`,
+          'Z',
+        ].join(' ');
+        return <Path key={e.id} d={d} fill={e.color} stroke={THEME.colors.background} strokeWidth={2} />;
+      })}
+    </Svg>
+  );
+}
+
+const periodName =(filter, offset, now = new Date()) => {
   if (filter === 'week') return offset === 0 ? 'esta semana' : 'la semana pasada';
   if (filter === 'month') return monthName(new Date(now.getFullYear(), now.getMonth() + offset, 1).getMonth()).toLowerCase();
   if (filter === 'year') return String(now.getFullYear() + offset);
@@ -146,29 +174,21 @@ export default function ChartsScreen({ transactions, categories }) {
             {spent > 0 && catEntries.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Por categoría</Text>
-                <View style={styles.stackedBar}>
-                  {catEntries.map(e => <View key={e.id} style={{ flex: e.val, backgroundColor: e.color }} />)}
-                </View>
-                {catEntries.map((e, i) => {
-                  const pct = (e.val / spent) * 100;
-                  return (
-                    <View key={e.id} style={[styles.catRow, i < catEntries.length - 1 && styles.catDivider]}>
-                      <View style={[styles.catDot, { backgroundColor: e.color }]} />
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.catTop}>
-                          <Text style={styles.catName} numberOfLines={1}>{e.label}</Text>
-                          <Text style={styles.catAmount}>{formatMoney(e.val)}</Text>
+                <View style={styles.pieRow}>
+                  <PieChart entries={catEntries} total={spent} />
+                  <View style={styles.legend}>
+                    {catEntries.map(e => (
+                      <View key={e.id} style={styles.legendRow}>
+                        <View style={[styles.legendDot, { backgroundColor: e.color }]} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.legendName} numberOfLines={1}>{e.label}</Text>
+                          <Text style={styles.legendAmount}>{formatMoney(e.val)}</Text>
                         </View>
-                        <View style={styles.catBarRow}>
-                          <View style={styles.catTrack}>
-                            <View style={[styles.catFill, { width: `${Math.max(pct, 1)}%`, backgroundColor: e.color }]} />
-                          </View>
-                          <Text style={styles.catPct}>{Math.round(pct)} %</Text>
-                        </View>
+                        <Text style={styles.catPct}>{Math.round((e.val / spent) * 100)} %</Text>
                       </View>
-                    </View>
-                  );
-                })}
+                    ))}
+                  </View>
+                </View>
               </View>
             )}
 
@@ -317,10 +337,31 @@ const styles = StyleSheet.create({
     gap: 2,
     marginBottom: THEME.space.sm,
   },
-  catRow: {
+  pieRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: THEME.space.md,
+    alignItems: 'center',
+    gap: THEME.space.lg,
+  },
+  legend: {
+    flex: 1,
+    gap: THEME.space.md,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: THEME.space.sm,
+  },
+  legendName: {
+    ...THEME.text.bodyMedium,
+  },
+  legendAmount: {
+    ...THEME.text.small,
+    fontVariant: ['tabular-nums'],
   },
   catDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -333,10 +374,6 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginRight: THEME.space.md,
   },
-  catTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   catName: {
     ...THEME.text.bodyMedium,
     flex: 1,
@@ -344,22 +381,6 @@ const styles = StyleSheet.create({
   },
   catAmount: {
     ...THEME.text.amount,
-  },
-  catBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: THEME.space.sm,
-  },
-  catTrack: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: THEME.colors.sunken,
-    overflow: 'hidden',
-  },
-  catFill: {
-    height: '100%',
-    borderRadius: 2,
   },
   catPct: {
     ...THEME.text.small,
