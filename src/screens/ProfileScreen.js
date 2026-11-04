@@ -74,7 +74,7 @@ const getSmartIcon = (name, type) => {
 };
 
 export default function ProfileScreen({
-  userName, setUserName, setTransactions,
+  userName, setUserName, onClearTransactions,
   categories, setCategories,
   onFullReset, onExport, onImport,
 }) {
@@ -226,8 +226,8 @@ export default function ProfileScreen({
             activeOpacity={0.6}
             onPress={() => confirmAction(
               'Borrar movimientos',
-              '¿Borrar todos los movimientos? Se conservarán tu nombre y tus categorías.',
-              () => setTransactions([]),
+              '¿Borrar todos los movimientos? Se conservarán tu nombre y tus categorías. Podrás deshacerlo durante unos segundos.',
+              onClearTransactions,
               'Borrar'
             )}
           >
@@ -241,7 +241,7 @@ export default function ProfileScreen({
             activeOpacity={0.6}
             onPress={() => confirmAction(
               'Empezar de cero',
-              'Se borrará TODO: nombre, categorías y movimientos. ¿Seguro?',
+              'Se borrará TODO: nombre, categorías y movimientos, y no se puede deshacer. Si quieres conservar algo, exporta antes una copia. ¿Seguro?',
               onFullReset,
               'Borrar todo'
             )}

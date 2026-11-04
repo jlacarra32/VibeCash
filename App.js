@@ -21,6 +21,7 @@ import MovementsScreen from './src/screens/MovementsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AddTransactionModal from './src/components/AddTransactionModal';
 import TransactionSheet from './src/components/TransactionSheet';
+import UndoToast from './src/components/UndoToast';
 import { showAlert, confirmAction } from './src/logic/dialogs';
 import { fromLocalDateKey } from './src/logic/dates';
 import { withDisplayColors } from './src/logic/helpers';
@@ -215,17 +216,30 @@ export default function App() {
       'Importar datos',
       `La copia${dateText} tiene ${count} movimiento${count === 1 ? '' : 's'}.${replaceText} ¿Continuar?`,
       () => {
+        // Lo de antes se guarda en memoria para poder deshacer la importación
+        const before = { transactions, categories, incomeCategories, userName, hasSeenWelcome };
         setTransactions(d.user_transactions);
         if (d.user_categories) setCategories(d.user_categories);
         if (d.user_income_categories) setIncomeCategories(d.user_income_categories);
         const name = d.user_name || userName || tempUserName.trim();
         if (name) setUserName(name);
         setHasSeenWelcome(true);
-        showAlert('Datos recuperados', 'Tus datos se han importado correctamente.');
+        showUndo('Datos importados', () => {
+          setTransactions(before.transactions);
+          setCategories(before.categories);
+          setIncomeCategories(before.incomeCategories);
+          if (before.userName) setUserName(before.userName);
+          setHasSeenWelcome(before.hasSeenWelcome);
+        });
       },
       'Importar'
     );
   };
+
+  // Aviso con "Deshacer" (borrados e importaciones)
+  const [toast, setToast] = useState(null);
+  const dismissToast = useCallback(() => setToast(null), []);
+  const showUndo = (message, onUndo) => setToast({ id: Date.now(), message, onUndo });
 
   // Detalle de un movimiento (hoja con Editar / Borrar), común a todas las pantallas
   const [detailTx, setDetailTx] = useState(null);
@@ -236,16 +250,26 @@ export default function App() {
     setTimeout(() => openEditModal(tx), Platform.OS === 'ios' ? 350 : 0);
   };
 
+  // Borra al instante y deja 6 segundos para deshacer (vuelve a su sitio)
   const deleteFromDetail = (tx) => {
-    confirmAction(
-      'Borrar movimiento',
-      '¿Seguro que quieres borrar este movimiento?',
-      () => {
-        setTransactions(prev => prev.filter(t => t.id !== tx.id));
-        setDetailTx(null);
-      },
-      'Borrar'
-    );
+    const index = transactions.findIndex(t => t.id === tx.id);
+    setTransactions(prev => prev.filter(t => t.id !== tx.id));
+    setDetailTx(null);
+    showUndo('Movimiento borrado', () => {
+      setTransactions(prev => {
+        if (prev.some(t => t.id === tx.id)) return prev;
+        const next = [...prev];
+        next.splice(Math.min(Math.max(index, 0), next.length), 0, tx);
+        return next;
+      });
+    });
+  };
+
+  const clearTransactions = () => {
+    const before = transactions;
+    if (before.length === 0) return;
+    setTransactions([]);
+    showUndo(`${before.length} movimientos borrados`, () => setTransactions(before));
   };
 
   // Mientras cargan las fuentes se muestra solo el fondo (evita un parpadeo
@@ -293,7 +317,7 @@ export default function App() {
               : <ProfileScreen
                   userName={userName}
                   setUserName={setUserName}
-                  setTransactions={setTransactions}
+                  onClearTransactions={clearTransactions}
                   categories={displayCategories}
                   setCategories={setCategories}
                   onFullReset={handleFullReset}
@@ -411,6 +435,7 @@ export default function App() {
           categories={displayCategories}
           incomeCategories={displayIncomeCategories}
         />
+        <UndoToast toast={toast} onDismiss={dismissToast} />
         {Platform.OS === 'web' && <Analytics />}
         {Platform.OS === 'web' && <SpeedInsights />}
       </SafeAreaView>
