@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated, KeyboardAvoidingView, ScrollView } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
+import { loadData, saveData, clearAllData } from './src/logic/storage';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -24,51 +24,11 @@ import { showAlert, confirmAction } from './src/logic/dialogs';
 import { fromLocalDateKey } from './src/logic/dates';
 import { withDisplayColors } from './src/logic/helpers';
 
-// Memoria de emergencia por si el móvil bloquea el almacenamiento
-let backupStorage = {};
-
-const saveData = async (key, val) => {
-  try {
-    const jsonValue = JSON.stringify(val);
-    backupStorage[key] = jsonValue; // Guardamos en memoria por si acaso
-    
-    // DOBLE GUARDADO EXTREMO EN WEB: Usar localStorage directo como salvavidas
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(key, jsonValue);
-    }
-
-    if (AsyncStorage && typeof AsyncStorage.setItem === 'function') {
-      await AsyncStorage.setItem(key, jsonValue);
-    }
-  } catch (error) {
-    console.log("Aviso: Error de guardado principal, usando memoria temporal", error);
-  }
-};
-
-const loadData = async (key) => {
-  try {
-    let res = null;
-    if (AsyncStorage && typeof AsyncStorage.getItem === 'function') {
-      res = await AsyncStorage.getItem(key);
-    }
-
-    // RESCATE EN WEB: Si AsyncStorage está vacío o falla, leer de localStorage directo
-    if (!res && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-      res = window.localStorage.getItem(key);
-    }
-
-    if (res) return JSON.parse(res);
-    return backupStorage[key] ? JSON.parse(backupStorage[key]) : null;
-  } catch (error) {
-    console.log("Error crítico leyendo datos, intentando rescate", error);
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-      let fallback = window.localStorage.getItem(key);
-      if (fallback) return JSON.parse(fallback);
-    }
-    return backupStorage[key] ? JSON.parse(backupStorage[key]) : null;
-  }
-};
-
+// Formas esperadas de lo guardado: si algo no encaja, storage.js lo aparta
+// en "<clave>_corrupt" en vez de dejar que rompa la app.
+const isObjectList = (v) => Array.isArray(v) && v.every(x => x && typeof x === 'object');
+const isTransactionList = (v) => isObjectList(v) && v.every(x => x.id != null);
+const isCategoryList = (v) => isObjectList(v) && v.every(x => typeof x.id === 'string');
 
 // Pestañas de la barra inferior
 const TABS = [
@@ -114,17 +74,20 @@ export default function App() {
 
   useEffect(() => {
     Promise.all([
-      loadData('user_transactions'),
-      loadData('user_name'),
-      loadData('user_categories'),
-      loadData('user_income_categories'),
-      loadData('has_seen_welcome')
+      loadData('user_transactions', isTransactionList),
+      loadData('user_name', (v) => typeof v === 'string'),
+      loadData('user_categories', isCategoryList),
+      loadData('user_income_categories', isCategoryList),
+      loadData('has_seen_welcome', (v) => typeof v === 'boolean'),
     ]).then(([txs, name, cats, incCats, seen]) => {
       if (txs) setTransactions(txs);
       if (name) setUserName(name);
       if (cats) setCategories(cats);
       if (incCats) setIncomeCategories(incCats);
       if (seen) setHasSeenWelcome(seen);
+    }).catch((e) => {
+      console.log('Error cargando datos', e);
+    }).finally(() => {
       setIsLoaded(true); // Ya podemos guardar de forma segura
     });
   }, []);
@@ -196,12 +159,7 @@ export default function App() {
 
   const handleFullReset = async () => {
     try {
-      // Limpiar todas las capas de persistencia para asegurar un reinicio limpio
-      backupStorage = {};
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.clear();
-      }
-      await AsyncStorage.clear();
+      await clearAllData();
       setTransactions([]);
       setUserName(null);
       setTempUserName('');
