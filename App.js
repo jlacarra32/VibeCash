@@ -7,6 +7,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
 import { loadData, saveData, clearAllData, requestPersistence } from './src/logic/storage';
 import { isBackupDue } from './src/logic/backupReminder';
+import { renameCategoryInState } from './src/logic/categories';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -265,6 +266,23 @@ export default function App() {
     });
   };
 
+  // Renombra una categoría y actualiza a la vez todos los movimientos que la
+  // usan. Se puede deshacer. Devuelve { error } si el nombre no vale.
+  const handleRenameCategory = (kind, oldId, newId) => {
+    const before = { transactions, categories, incomeCategories };
+    const result = renameCategoryInState(before, kind, oldId, newId);
+    if (result.error) return result;
+    setTransactions(result.state.transactions);
+    setCategories(result.state.categories);
+    setIncomeCategories(result.state.incomeCategories);
+    showUndo(`Categoría renombrada a «${newId.trim()}»`, () => {
+      setTransactions(before.transactions);
+      setCategories(before.categories);
+      setIncomeCategories(before.incomeCategories);
+    });
+    return {};
+  };
+
   const clearTransactions = () => {
     const before = transactions;
     if (before.length === 0) return;
@@ -320,6 +338,9 @@ export default function App() {
                   onClearTransactions={clearTransactions}
                   categories={displayCategories}
                   setCategories={setCategories}
+                  incomeCategories={displayIncomeCategories}
+                  setIncomeCategories={setIncomeCategories}
+                  onRenameCategory={handleRenameCategory}
                   onFullReset={handleFullReset}
                   onExport={async () => {
                     const result = await exportBackup({ transactions, userName, categories, incomeCategories });

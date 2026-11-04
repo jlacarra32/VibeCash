@@ -73,13 +73,22 @@ const getSmartIcon = (name, type) => {
   return type === 'income' ? 'cash-outline' : 'cart-outline';
 };
 
+const INCOME_DEFAULT_COLOR = COLORS[3];
+
+const NAME_ERRORS = {
+  empty: ['Falta el nombre', 'Escribe un nombre para la categoría.'],
+  duplicate: ['Categoría repetida', 'Ya existe una categoría con ese nombre.'],
+  missing: ['No se encontró', 'Esa categoría ya no existe.'],
+};
+
 export default function ProfileScreen({
   userName, setUserName, onClearTransactions,
-  categories, setCategories,
+  categories, setCategories, incomeCategories, setIncomeCategories, onRenameCategory,
   onFullReset, onExport, onImport,
 }) {
   const [tempName, setTempName] = useState(userName || '');
-  // Hoja de categoría: null | { mode: 'new' } | { mode: 'edit', cat }
+  // Hoja de categoría: null | { mode: 'new', kind } | { mode: 'edit', kind, cat }
+  // kind: 'expense' | 'income'
   const [sheet, setSheet] = useState(null);
   const [catName, setCatName] = useState('');
   const [catColor, setCatColor] = useState(COLORS[0]);
@@ -93,48 +102,69 @@ export default function ProfileScreen({
     if (name !== userName) setUserName(name);
   };
 
-  const openNew = () => {
+  const listFor = (k) => (k === 'income' ? incomeCategories : categories) || [];
+  const setListFor = (k) => (k === 'income' ? setIncomeCategories : setCategories);
+
+  const openNew = (kind) => {
     setCatName('');
-    setCatColor(COLORS[0]);
-    setSheet({ mode: 'new' });
+    setCatColor(kind === 'income' ? INCOME_DEFAULT_COLOR : COLORS[0]);
+    setSheet({ mode: 'new', kind });
   };
-  const openEdit = (cat) => {
+  const openEdit = (kind, cat) => {
+    setCatName(cat.id);
     setCatColor(cat.color);
-    setSheet({ mode: 'edit', cat });
+    setSheet({ mode: 'edit', kind, cat });
   };
   const closeSheet = () => setSheet(null);
+  const kind = sheet ? sheet.kind : 'expense';
   // Categoría que se está editando (null si la hoja está cerrada o es nueva)
   const editingCat = sheet && sheet.mode === 'edit' ? sheet.cat : null;
 
   const handleAddCategory = () => {
     const name = catName.trim();
     if (!name) return;
-    const exists = (categories || []).some(c => c.id.toLowerCase() === name.toLowerCase());
+    const lower = name.toLowerCase();
+    const exists = listFor(kind).some(c => c.id.toLowerCase() === lower)
+      || (kind === 'income' && lower === 'ingreso'); // "Ingreso" ya existe como categoría general
     if (exists) {
       showAlert('Categoría repetida', `Ya existe una categoría llamada "${name}".`);
       return;
     }
-    setCategories(prev => [...prev, { id: name, color: catColor, icon: getSmartIcon(name, 'expense') }]);
+    setListFor(kind)(prev => [...prev, { id: name, color: catColor, icon: getSmartIcon(name, kind) }]);
     closeSheet();
   };
 
-  // Solo cambia el color: el nombre es la clave que enlaza con los movimientos
-  const handleSaveColor = () => {
+  // Cambia nombre y/o color. El nombre se actualiza también en todos los
+  // movimientos de la categoría (lo hace App en una sola operación).
+  const handleSaveEdit = () => {
     if (!editingCat) return;
-    const id = editingCat.id;
-    // Sin cambios: no se reescribe lo guardado
-    if (catColor === editingCat.color) { closeSheet(); return; }
-    setCategories(prev => prev.map(c => (c.id === id ? { ...c, color: catColor } : c)));
+    const oldId = editingCat.id;
+    const newName = catName.trim();
+    let id = oldId;
+    if (newName !== oldId) {
+      const result = onRenameCategory(kind, oldId, newName);
+      if (result && result.error) {
+        const [title, msg] = NAME_ERRORS[result.error] || NAME_ERRORS.empty;
+        showAlert(title, msg);
+        return;
+      }
+      id = newName;
+    }
+    // Sin cambios de color: no se reescribe lo guardado
+    if (catColor !== editingCat.color) {
+      setListFor(kind)(prev => prev.map(c => (c.id === id ? { ...c, color: catColor } : c)));
+    }
     closeSheet();
   };
 
   const handleDeleteCategory = () => {
     if (!editingCat) return;
     const id = editingCat.id;
+    const target = kind;
     confirmAction(
       'Eliminar categoría',
       `¿Eliminar "${id}"? Los movimientos que ya tengas en esta categoría no se borran.`,
-      () => { setCategories(prev => prev.filter(c => c.id !== id)); closeSheet(); },
+      () => { setListFor(target)(prev => prev.filter(c => c.id !== id)); closeSheet(); },
       'Eliminar'
     );
   };
@@ -151,8 +181,31 @@ export default function ProfileScreen({
   };
 
   const isNew = sheet && sheet.mode === 'new';
-  const previewName = isNew ? catName.trim() : editingCat?.id;
-  const previewIcon = isNew ? getSmartIcon(catName || '', 'expense') : (editingCat?.icon || 'cart-outline');
+  const previewName = catName.trim();
+  const previewIcon = isNew ? getSmartIcon(catName || '', kind) : (editingCat?.icon || 'cart-outline');
+  const canSave = !!catName.trim();
+
+  const renderCategoryRows = (k) => (
+    <View style={styles.group}>
+      {listFor(k).map(cat => (
+        <TouchableOpacity key={cat.id} style={styles.row} onPress={() => openEdit(k, cat)} activeOpacity={0.6}>
+          <View style={[styles.catIcon, { backgroundColor: cat.color + '1F' }]}>
+            <Ionicons name={cat.icon || 'cart-outline'} size={16} color={cat.color} />
+          </View>
+          <Text style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{cat.id}</Text>
+          <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity style={[styles.row, styles.rowLast]} onPress={() => openNew(k)} activeOpacity={0.6}>
+        <View style={[styles.catIcon, { backgroundColor: THEME.colors.sunken }]}>
+          <Ionicons name="add" size={18} color={THEME.colors.accent} />
+        </View>
+        <Text style={[styles.rowTitle, { color: THEME.colors.accent }]}>
+          {k === 'income' ? 'Nueva categoría de ingreso' : 'Nueva categoría'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -178,25 +231,13 @@ export default function ProfileScreen({
         </View>
 
         {/* Categorías */}
-        <Text style={styles.groupLabel}>Categorías</Text>
-        <View style={styles.group}>
-          {(categories || []).map(cat => (
-            <TouchableOpacity key={cat.id} style={styles.row} onPress={() => openEdit(cat)} activeOpacity={0.6}>
-              <View style={[styles.catIcon, { backgroundColor: cat.color + '1F' }]}>
-                <Ionicons name={cat.icon || 'cart-outline'} size={16} color={cat.color} />
-              </View>
-              <Text style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{cat.id}</Text>
-              <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={[styles.row, styles.rowLast]} onPress={openNew} activeOpacity={0.6}>
-            <View style={[styles.catIcon, { backgroundColor: THEME.colors.sunken }]}>
-              <Ionicons name="add" size={18} color={THEME.colors.accent} />
-            </View>
-            <Text style={[styles.rowTitle, { color: THEME.colors.accent }]}>Nueva categoría</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.groupNote}>Toca una categoría para cambiar su color o eliminarla.</Text>
+        <Text style={styles.groupLabel}>Categorías de gasto</Text>
+        {renderCategoryRows('expense')}
+        <Text style={styles.groupNote}>Toca una categoría para cambiar su nombre o su color, o para eliminarla.</Text>
+
+        <Text style={styles.groupLabel}>Categorías de ingreso</Text>
+        {renderCategoryRows('income')}
+        <Text style={styles.groupNote}>Opcionales. Si no creas ninguna, todos los ingresos se apuntan como «Ingreso».</Text>
 
         {/* Datos */}
         <Text style={styles.groupLabel}>Tus datos</Text>
@@ -279,17 +320,20 @@ export default function ProfileScreen({
       <Sheet visible={!!sheet} onClose={closeSheet}>
         {sheet && (
           <View>
-            <Text style={styles.sheetTitle}>{isNew ? 'Nueva categoría' : editingCat?.id}</Text>
+            <Text style={styles.sheetTitle}>
+              {isNew ? (kind === 'income' ? 'Nueva categoría de ingreso' : 'Nueva categoría') : 'Editar categoría'}
+            </Text>
 
-            {isNew && (
-              <TextInput
-                style={styles.sheetInput}
-                placeholder="Nombre (p. ej. Gimnasio)"
-                placeholderTextColor={THEME.colors.inkFaint}
-                value={catName}
-                onChangeText={setCatName}
-                autoFocus
-              />
+            <TextInput
+              style={styles.sheetInput}
+              placeholder={kind === 'income' ? 'Nombre (p. ej. Nómina)' : 'Nombre (p. ej. Gimnasio)'}
+              placeholderTextColor={THEME.colors.inkFaint}
+              value={catName}
+              onChangeText={setCatName}
+              autoFocus={isNew}
+            />
+            {!isNew && (
+              <Text style={styles.sheetHint}>Si cambias el nombre, se actualizan también tus movimientos de esta categoría.</Text>
             )}
 
             <Text style={styles.sheetLabel}>Color</Text>
@@ -319,9 +363,9 @@ export default function ProfileScreen({
             )}
 
             <TouchableOpacity
-              style={[styles.primaryBtn, isNew && !catName.trim() && { opacity: 0.4 }]}
-              onPress={isNew ? handleAddCategory : handleSaveColor}
-              disabled={isNew && !catName.trim()}
+              style={[styles.primaryBtn, !canSave && { opacity: 0.4 }]}
+              onPress={isNew ? handleAddCategory : handleSaveEdit}
+              disabled={!canSave}
             >
               <Text style={styles.primaryBtnText}>{isNew ? 'Crear categoría' : 'Guardar'}</Text>
             </TouchableOpacity>
@@ -425,6 +469,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: THEME.space.lg,
     paddingVertical: 14,
     outlineStyle: 'none',
+  },
+  sheetHint: {
+    ...THEME.text.small,
+    marginTop: THEME.space.sm,
   },
   sheetLabel: {
     ...THEME.text.label,

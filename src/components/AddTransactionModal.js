@@ -47,7 +47,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       setDescription(initialData.description || '');
       setAmount(initialData.amount != null ? String(initialData.amount) : '');
       setType(txType);
-      setCategory(txType === 'income' ? 'Ingreso' : (initialData.category || ''));
+      setCategory(txType === 'income' ? (initialData.category || 'Ingreso') : (initialData.category || ''));
       setIsShared(!!initialData.isShared);
       setMyPart(initialData.myPart != null ? String(initialData.myPart) : '');
       setPaymentMethod(initialData.paymentMethod === 'card' || initialData.paymentMethod === 'cash' ? initialData.paymentMethod : null);
@@ -99,7 +99,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       return;
     }
     const refund = (type === 'expense' && isShared) ? Math.max(0, totalAmount - myPartValue) : 0;
-    const finalCategory = type === 'income' ? 'Ingreso' : category;
+    const finalCategory = type === 'income' ? (category || 'Ingreso') : category;
 
     // Mismo formato de siempre; si no hay nota, se usa el nombre de la categoría
     const newTx = {
@@ -129,6 +129,11 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setDate(defaultDate && isValidDate(defaultDate) ? new Date(defaultDate) : new Date());
     setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
+
+  // "Ingreso" es la categoría general de siempre; las tuyas van detrás
+  const chipCategories = type === 'income'
+    ? [{ id: 'Ingreso', color: THEME.colors.income, icon: 'cash-outline' }, ...(incomeCategories || [])]
+    : (categories || []);
 
   const title = initialData ? 'Editar movimiento' : type === 'income' ? 'Nuevo ingreso' : 'Nuevo gasto';
   const parsedAmount = parseFloat((amount || '0').replace(',', '.')) || 0;
@@ -163,8 +168,8 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
           <Text style={[styles.amountCurrency, type === 'income' && { color: THEME.colors.income }]}>€</Text>
         </View>
 
-        {/* Categoría */}
-        {type === 'expense' && (
+        {/* Categoría (en ingresos solo si has creado categorías de ingreso) */}
+        {(type === 'expense' || (incomeCategories || []).length > 0) && (
           <>
             <Text style={styles.label}>Categoría</Text>
             <ScrollView
@@ -173,7 +178,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
               contentContainerStyle={styles.chipRow}
               keyboardShouldPersistTaps="handled"
             >
-              {(categories || []).map(cat => {
+              {chipCategories.map(cat => {
                 const active = category === cat.id;
                 return (
                   <TouchableOpacity

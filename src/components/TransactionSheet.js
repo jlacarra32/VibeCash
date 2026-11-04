@@ -31,7 +31,7 @@ function Detail({ tx, categories, incomeCategories, onEdit, onDelete }) {
   const refund = Number(tx.refundAmount) || 0;
 
   const rows = [
-    { label: 'Categoría', value: isIncome ? 'Ingreso' : tx.category },
+    { label: 'Categoría', value: tx.category || (isIncome ? 'Ingreso' : '') },
     { label: 'Fecha', value: formatDateLong(tx.date) },
   ];
   if (tx.paymentMethod === 'card') rows.push({ label: 'Forma de pago', value: 'Tarjeta' });
