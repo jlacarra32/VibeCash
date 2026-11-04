@@ -9,6 +9,8 @@ import ScreenHeader from '../components/ScreenHeader';
 import Segmented from '../components/Segmented';
 import TransactionRow from '../components/TransactionRow';
 import EmptyState from '../components/EmptyState';
+import BudgetBar from '../components/BudgetBar';
+import { budgetStatus, hasBudgets } from '../logic/budget';
 
 const RECENT_LIMIT = 15;
 
@@ -21,7 +23,7 @@ const periodCaption = (filter) => {
   return 'desde el principio';
 };
 
-export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd, backupDue, onBackupNow, onBackupLater }) {
+export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd, backupDue, onBackupNow, onBackupLater, budgets }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
@@ -64,6 +66,11 @@ export default function DataEntryScreen({ transactions, userName, categories, in
       return { id, value, color: cat ? cat.color : THEME.colors.inkFaint };
     });
   const spent = cashFlow.totalExpenseNet;
+
+  // Presupuesto del mes en curso (opcional: solo si el usuario lo ha fijado)
+  const budget = hasBudgets(budgets)
+    ? budgetStatus(budgets, transactions, new Date(), (categories || []).map(c => c.id))
+    : null;
 
   const recent = sortByDateDesc(cashFlow.transactions).slice(0, RECENT_LIMIT);
   const groups = groupByDay(recent);
@@ -143,6 +150,18 @@ export default function DataEntryScreen({ transactions, userName, categories, in
             </View>
           </View>
         </View>
+
+        {budget && (budget.total || budget.categories.length > 0) && (
+          <View style={styles.budgetCard}>
+            <Text style={styles.budgetTitle}>
+              Presupuesto · <Text style={styles.balanceLabelItalic}>{monthName(new Date().getMonth()).toLowerCase()}</Text>
+            </Text>
+            {budget.total && <BudgetBar label="Total del mes" status={budget.total} hide={!showBalance} />}
+            {budget.categories.slice(0, 4).map(c => (
+              <BudgetBar key={c.id} label={c.id} status={c} hide={!showBalance} />
+            ))}
+          </View>
+        )}
 
         {/* En qué se va el dinero */}
         {spent > 0 && catEntries.length > 0 && (
@@ -299,6 +318,18 @@ const styles = StyleSheet.create({
     ...THEME.text.amount,
     fontSize: 17,
     marginTop: 2,
+  },
+  budgetCard: {
+    marginTop: THEME.space.xl,
+    padding: THEME.space.lg,
+    borderRadius: THEME.radius.md,
+    backgroundColor: THEME.colors.elevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: THEME.colors.hairline,
+  },
+  budgetTitle: {
+    ...THEME.text.small,
+    fontFamily: THEME.fonts.medium,
   },
   split: {
     marginTop: THEME.space.xl,

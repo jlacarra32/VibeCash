@@ -8,6 +8,7 @@ import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
 import { loadData, saveData, clearAllData, requestPersistence } from './src/logic/storage';
 import { isBackupDue } from './src/logic/backupReminder';
 import { renameCategoryInState } from './src/logic/categories';
+import { EMPTY_BUDGETS, normalizeBudgets } from './src/logic/budget';
 import { generateDue, isValidTemplate, templateFromTransaction, frequencyLabel } from './src/logic/recurring';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
@@ -77,6 +78,7 @@ export default function App() {
   const [lastBackupAt, setLastBackupAt] = useState(null); // clave nueva: last_backup_at
   const [backupNudgeHidden, setBackupNudgeHidden] = useState(false);
   const [recurring, setRecurring] = useState([]); // clave nueva: user_recurring
+  const [budgets, setBudgets] = useState(EMPTY_BUDGETS); // clave nueva: user_budgets
   // Aviso con "Deshacer" (borrados, importaciones, recurrentes…)
   const [toast, setToast] = useState(null);
   const dismissToast = useCallback(() => setToast(null), []);
@@ -93,7 +95,9 @@ export default function App() {
       loadData('has_seen_welcome', (v) => typeof v === 'boolean'),
       loadData('last_backup_at', (v) => typeof v === 'number'),
       loadData('user_recurring', (v) => Array.isArray(v) && v.every(x => x && typeof x === 'object')),
-    ]).then(([txs, name, cats, incCats, seen, backupAt, recList]) => {
+      loadData('user_budgets', (v) => !!v && typeof v === 'object' && !Array.isArray(v)),
+    ]).then(([txs, name, cats, incCats, seen, backupAt, recList, budgetData]) => {
+      if (budgetData) setBudgets(normalizeBudgets(budgetData));
       if (backupAt) setLastBackupAt(backupAt);
       if (recList) setRecurring(recList.filter(isValidTemplate));
       if (txs) setTransactions(txs);
@@ -138,6 +142,11 @@ export default function App() {
     if (!isLoaded) return;
     saveData('user_recurring', recurring);
   }, [recurring, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    saveData('user_budgets', budgets);
+  }, [budgets, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || lastBackupAt == null) return;
@@ -240,6 +249,7 @@ export default function App() {
       setHasSeenWelcome(false);
       setLastBackupAt(null);
       setRecurring([]);
+      setBudgets(EMPTY_BUDGETS);
       setCategories(CATEGORIES);
       setIncomeCategories(INCOME_CATEGORIES);
       setCurrentScreen('DataEntry');
@@ -280,11 +290,12 @@ export default function App() {
       `La copia${dateText} tiene ${count} movimiento${count === 1 ? '' : 's'}.${replaceText} ¿Continuar?`,
       () => {
         // Lo de antes se guarda en memoria para poder deshacer la importación
-        const before = { transactions, categories, incomeCategories, userName, hasSeenWelcome, recurring };
+        const before = { transactions, categories, incomeCategories, userName, hasSeenWelcome, recurring, budgets };
         setTransactions(d.user_transactions);
         if (d.user_categories) setCategories(d.user_categories);
         if (d.user_income_categories) setIncomeCategories(d.user_income_categories);
         if (d.user_recurring) setRecurring(d.user_recurring.filter(isValidTemplate));
+        if (d.user_budgets) setBudgets(normalizeBudgets(d.user_budgets));
         const name = d.user_name || userName || tempUserName.trim();
         if (name) setUserName(name);
         setHasSeenWelcome(true);
@@ -295,6 +306,7 @@ export default function App() {
           if (before.userName) setUserName(before.userName);
           setHasSeenWelcome(before.hasSeenWelcome);
           setRecurring(before.recurring);
+          setBudgets(before.budgets);
         });
       },
       'Importar'
@@ -328,18 +340,20 @@ export default function App() {
   // Renombra una categoría y actualiza a la vez todos los movimientos que la
   // usan. Se puede deshacer. Devuelve { error } si el nombre no vale.
   const handleRenameCategory = (kind, oldId, newId) => {
-    const before = { transactions, categories, incomeCategories, recurring };
+    const before = { transactions, categories, incomeCategories, recurring, budgets };
     const result = renameCategoryInState(before, kind, oldId, newId);
     if (result.error) return result;
     setTransactions(result.state.transactions);
     setCategories(result.state.categories);
     setIncomeCategories(result.state.incomeCategories);
     setRecurring(result.state.recurring);
+    setBudgets(result.state.budgets);
     showUndo(`Categoría renombrada a «${newId.trim()}»`, () => {
       setTransactions(before.transactions);
       setCategories(before.categories);
       setIncomeCategories(before.incomeCategories);
       setRecurring(before.recurring);
+      setBudgets(before.budgets);
     });
     return {};
   };
@@ -379,6 +393,7 @@ export default function App() {
                   backupDue={!backupNudgeHidden && isBackupDue({ lastBackupAt, transactionCount: transactions.length })}
                   onBackupNow={() => navigate('Profile')}
                   onBackupLater={() => setBackupNudgeHidden(true)}
+                  budgets={budgets}
                 />
               : currentScreen === 'Charts'
               ? <ChartsScreen transactions={transactions} categories={displayCategories} />
@@ -403,11 +418,13 @@ export default function App() {
                   setIncomeCategories={setIncomeCategories}
                   onRenameCategory={handleRenameCategory}
                   recurring={recurring}
+                  budgets={budgets}
+                  setBudgets={setBudgets}
                   onUpdateRecurring={(id, patch) => setRecurring(prev => prev.map(r => (r.id === id ? (typeof patch === 'function' ? patch(r) : { ...r, ...patch }) : r)))}
                   onDeleteRecurring={(id) => setRecurring(prev => prev.filter(r => r.id !== id))}
                   onFullReset={handleFullReset}
                   onExport={async () => {
-                    const result = await exportBackup({ transactions, userName, categories, incomeCategories, recurring });
+                    const result = await exportBackup({ transactions, userName, categories, incomeCategories, recurring, budgets });
                     if (result !== 'cancelled') setLastBackupAt(Date.now());
                     return result;
                   }}

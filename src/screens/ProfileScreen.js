@@ -78,6 +78,14 @@ const getSmartIcon = (name, type) => {
 
 const INCOME_DEFAULT_COLOR = COLORS[3];
 
+// '12,5' -> 12.5; vacío o no válido -> null
+const parseMoney = (text) => {
+  const v = parseFloat((text || '').replace(',', '.'));
+  return v > 0 ? v : null;
+};
+const moneyText = (n) => (n ? String(n).replace('.', ',') : '');
+const isMoneyText = (v) => /^\d*[.,]?\d*$/.test(v);
+
 const NAME_ERRORS = {
   empty: ['Falta el nombre', 'Escribe un nombre para la categoría.'],
   duplicate: ['Categoría repetida', 'Ya existe una categoría con ese nombre.'],
@@ -88,6 +96,7 @@ export default function ProfileScreen({
   userName, setUserName, onClearTransactions,
   categories, setCategories, incomeCategories, setIncomeCategories, onRenameCategory,
   recurring, onUpdateRecurring, onDeleteRecurring,
+  budgets, setBudgets,
   onFullReset, onExport, onImport,
 }) {
   const [tempName, setTempName] = useState(userName || '');
@@ -96,6 +105,11 @@ export default function ProfileScreen({
   const [sheet, setSheet] = useState(null);
   const [catName, setCatName] = useState('');
   const [catColor, setCatColor] = useState(COLORS[0]);
+  const [catBudget, setCatBudget] = useState(''); // límite mensual de la categoría (opcional)
+  // Hoja del presupuesto mensual total
+  const [budgetSheet, setBudgetSheet] = useState(false);
+  const [monthlyText, setMonthlyText] = useState('');
+  const catBudgets = (budgets && budgets.categories) || {};
 
   // Hoja de un movimiento recurrente (id) y su importe en edición
   const [recId, setRecId] = useState(null);
@@ -148,11 +162,13 @@ export default function ProfileScreen({
 
   const openNew = (kind) => {
     setCatName('');
+    setCatBudget('');
     setCatColor(kind === 'income' ? INCOME_DEFAULT_COLOR : COLORS[0]);
     setSheet({ mode: 'new', kind });
   };
   const openEdit = (kind, cat) => {
     setCatName(cat.id);
+    setCatBudget(moneyText(catBudgets[cat.id]));
     setCatColor(cat.color);
     setSheet({ mode: 'edit', kind, cat });
   };
@@ -172,6 +188,8 @@ export default function ProfileScreen({
       return;
     }
     setListFor(kind)(prev => [...prev, { id: name, color: catColor, icon: getSmartIcon(name, kind) }]);
+    const limit = kind === 'expense' ? parseMoney(catBudget) : null;
+    if (limit) setBudgets(prev => ({ ...prev, categories: { ...prev.categories, [name]: limit } }));
     closeSheet();
   };
 
@@ -190,6 +208,17 @@ export default function ProfileScreen({
         return;
       }
       id = newName;
+    }
+    // Límite mensual de la categoría (solo gastos). Va después del renombrado.
+    if (kind === 'expense') {
+      const limit = parseMoney(catBudget);
+      if (limit !== (catBudgets[oldId] || null)) {
+        setBudgets(prev => {
+          const cats = { ...prev.categories };
+          if (limit) cats[id] = limit; else delete cats[id];
+          return { ...prev, categories: cats };
+        });
+      }
     }
     // Sin cambios de color: no se reescribe lo guardado
     if (catColor !== editingCat.color) {
@@ -233,7 +262,12 @@ export default function ProfileScreen({
           <View style={[styles.catIcon, { backgroundColor: cat.color + '1F' }]}>
             <Ionicons name={cat.icon || 'cart-outline'} size={16} color={cat.color} />
           </View>
-          <Text style={[styles.rowTitle, { flex: 1 }]} numberOfLines={1}>{cat.id}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle} numberOfLines={1}>{cat.id}</Text>
+            {k === 'expense' && catBudgets[cat.id] > 0 && (
+              <Text style={styles.rowSub}>Límite {formatMoney(catBudgets[cat.id], { decimals: 0 })} al mes</Text>
+            )}
+          </View>
           <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
         </TouchableOpacity>
       ))}
@@ -279,6 +313,28 @@ export default function ProfileScreen({
         <Text style={styles.groupLabel}>Categorías de ingreso</Text>
         {renderCategoryRows('income')}
         <Text style={styles.groupNote}>Opcionales. Si no creas ninguna, todos los ingresos se apuntan como «Ingreso».</Text>
+
+        {/* Presupuesto (opcional) */}
+        <Text style={styles.groupLabel}>Presupuesto</Text>
+        <View style={styles.group}>
+          <TouchableOpacity
+            style={[styles.row, styles.rowLast]}
+            activeOpacity={0.6}
+            onPress={() => { setMonthlyText(moneyText(budgets && budgets.monthly)); setBudgetSheet(true); }}
+          >
+            <View style={[styles.catIcon, { backgroundColor: THEME.colors.sunken }]}>
+              <Ionicons name="speedometer-outline" size={17} color={THEME.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Presupuesto mensual</Text>
+              <Text style={styles.rowSub}>
+                {budgets && budgets.monthly ? `${formatMoney(budgets.monthly, { decimals: 0 })} al mes` : 'Sin presupuesto'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.groupNote}>Opcional. Verás en Inicio cuánto llevas gastado. También puedes poner un límite a cada categoría de gasto.</Text>
 
         {/* Movimientos recurrentes */}
         <Text style={styles.groupLabel}>Movimientos recurrentes</Text>
@@ -392,6 +448,43 @@ export default function ProfileScreen({
         <Text style={styles.colophon}>VibeCash</Text>
       </ScrollView>
 
+      {/* Hoja: presupuesto mensual */}
+      <Sheet visible={budgetSheet} onClose={() => setBudgetSheet(false)}>
+        <View>
+          <Text style={styles.sheetTitle}>Presupuesto mensual</Text>
+          <Text style={styles.sheetHint}>Cuánto quieres gastar como máximo cada mes (lo que te cuesta de verdad, sin la parte que te devuelven).</Text>
+          <Text style={styles.sheetLabel}>Importe</Text>
+          <TextInput
+            style={styles.sheetInput}
+            keyboardType="decimal-pad"
+            placeholder="p. ej. 800"
+            placeholderTextColor={THEME.colors.inkFaint}
+            value={monthlyText}
+            onChangeText={(v) => { if (isMoneyText(v)) setMonthlyText(v); }}
+            accessibilityLabel="Presupuesto mensual"
+          />
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => {
+              const value = parseMoney(monthlyText);
+              if (!value) { showAlert('Importe no válido', 'Escribe un importe mayor que 0, o usa «Quitar presupuesto».'); return; }
+              setBudgets(prev => ({ ...prev, monthly: value }));
+              setBudgetSheet(false);
+            }}
+          >
+            <Text style={styles.primaryBtnText}>Guardar</Text>
+          </TouchableOpacity>
+          {!!(budgets && budgets.monthly) && (
+            <TouchableOpacity
+              style={styles.deleteLink}
+              onPress={() => { setBudgets(prev => ({ ...prev, monthly: null })); setBudgetSheet(false); }}
+            >
+              <Text style={styles.deleteLinkText}>Quitar presupuesto</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Sheet>
+
       {/* Hoja: movimiento recurrente */}
       <Sheet visible={!!editingRec} onClose={() => setRecId(null)}>
         {editingRec && (
@@ -425,7 +518,7 @@ export default function ProfileScreen({
       {/* Hoja: nueva categoría / editar categoría */}
       <Sheet visible={!!sheet} onClose={closeSheet}>
         {sheet && (
-          <View>
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.sheetTitle}>
               {isNew ? (kind === 'income' ? 'Nueva categoría de ingreso' : 'Nueva categoría') : 'Editar categoría'}
             </Text>
@@ -440,6 +533,21 @@ export default function ProfileScreen({
             />
             {!isNew && (
               <Text style={styles.sheetHint}>Si cambias el nombre, se actualizan también tus movimientos de esta categoría.</Text>
+            )}
+
+            {kind === 'expense' && (
+              <>
+                <Text style={styles.sheetLabel}>Límite mensual <Text style={{ textTransform: 'none', letterSpacing: 0 }}>· opcional</Text></Text>
+                <TextInput
+                  style={styles.sheetInput}
+                  keyboardType="decimal-pad"
+                  placeholder="Sin límite"
+                  placeholderTextColor={THEME.colors.inkFaint}
+                  value={catBudget}
+                  onChangeText={(v) => { if (isMoneyText(v)) setCatBudget(v); }}
+                  accessibilityLabel="Límite mensual de la categoría"
+                />
+              </>
             )}
 
             <Text style={styles.sheetLabel}>Color</Text>
@@ -481,7 +589,7 @@ export default function ProfileScreen({
                 <Text style={styles.deleteLinkText}>Eliminar categoría</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </ScrollView>
         )}
       </Sheet>
     </View>
