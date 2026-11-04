@@ -16,12 +16,14 @@ export default function TransactionRow({ tx, categories, incomeCategories, onPre
   const icon = getCategoryIcon(tx.category, tx.type, categories, incomeCategories);
   const amount = Number(tx.amount) || 0;
 
-  const title = tx.description || (isIncome ? 'Ingreso' : tx.category);
+  const categoryName = tx.category || (isIncome ? 'Ingreso' : '');
+  const title = tx.description || categoryName;
   // Sin nota, el título ya es la categoría: no se repite debajo
-  const meta = [title === (isIncome ? 'Ingreso' : tx.category) ? null : (isIncome ? 'Ingreso' : tx.category)];
+  const meta = [title === categoryName ? null : categoryName];
   if (!isIncome && tx.isShared && tx.myPart != null && Number(tx.myPart) < amount) {
     meta.push(`tu parte ${formatMoney(tx.myPart)}`);
   }
+  if (tx.recurringId) meta.push('recurrente');
   if (showDate) meta.push(formatDateShort(tx.date));
 
   return (

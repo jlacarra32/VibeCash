@@ -9,6 +9,8 @@ import ScreenHeader from '../components/ScreenHeader';
 import Segmented from '../components/Segmented';
 import TransactionRow from '../components/TransactionRow';
 import EmptyState from '../components/EmptyState';
+import BudgetBar from '../components/BudgetBar';
+import { budgetStatus, hasBudgets } from '../logic/budget';
 
 const RECENT_LIMIT = 15;
 
@@ -21,7 +23,7 @@ const periodCaption = (filter) => {
   return 'desde el principio';
 };
 
-export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd }) {
+export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd, backupDue, onBackupNow, onBackupLater, budgets }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
@@ -65,6 +67,11 @@ export default function DataEntryScreen({ transactions, userName, categories, in
     });
   const spent = cashFlow.totalExpenseNet;
 
+  // Presupuesto del mes en curso (opcional: solo si el usuario lo ha fijado)
+  const budget = hasBudgets(budgets)
+    ? budgetStatus(budgets, transactions, new Date(), (categories || []).map(c => c.id))
+    : null;
+
   const recent = sortByDateDesc(cashFlow.transactions).slice(0, RECENT_LIMIT);
   const groups = groupByDay(recent);
   const hidden = '••••';
@@ -86,6 +93,24 @@ export default function DataEntryScreen({ transactions, userName, categories, in
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {backupDue && (
+          <View style={styles.nudge}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={THEME.colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.nudgeTitle}>Guarda una copia de tus datos</Text>
+              <Text style={styles.nudgeText}>Solo viven en este dispositivo. Una copia te protege si algo falla.</Text>
+              <View style={styles.nudgeActions}>
+                <TouchableOpacity onPress={onBackupNow} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.link}>Hacer copia</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onBackupLater} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.nudgeLater}>Más tarde</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
         <Segmented options={PERIOD_OPTIONS} value={timeFilter} onChange={setTimeFilter} />
 
         {/* Balance */}
@@ -125,6 +150,18 @@ export default function DataEntryScreen({ transactions, userName, categories, in
             </View>
           </View>
         </View>
+
+        {budget && (budget.total || budget.categories.length > 0) && (
+          <View style={styles.budgetCard}>
+            <Text style={styles.budgetTitle}>
+              Presupuesto · <Text style={styles.balanceLabelItalic}>{monthName(new Date().getMonth()).toLowerCase()}</Text>
+            </Text>
+            {budget.total && <BudgetBar label="Total del mes" status={budget.total} hide={!showBalance} />}
+            {budget.categories.slice(0, 4).map(c => (
+              <BudgetBar key={c.id} label={c.id} status={c} hide={!showBalance} />
+            ))}
+          </View>
+        )}
 
         {/* En qué se va el dinero */}
         {spent > 0 && catEntries.length > 0 && (
@@ -211,6 +248,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: THEME.layout.gutter,
     paddingBottom: 120,
   },
+  nudge: {
+    flexDirection: 'row',
+    gap: THEME.space.md,
+    padding: THEME.space.lg,
+    marginBottom: THEME.space.lg,
+    borderRadius: THEME.radius.md,
+    backgroundColor: THEME.colors.sunken,
+  },
+  nudgeTitle: {
+    ...THEME.text.bodyMedium,
+  },
+  nudgeText: {
+    ...THEME.text.small,
+    marginTop: 2,
+  },
+  nudgeActions: {
+    flexDirection: 'row',
+    gap: THEME.space.xl,
+    marginTop: THEME.space.md,
+  },
+  nudgeLater: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.small,
+    color: THEME.colors.inkSoft,
+  },
   balance: {
     marginTop: THEME.space.xl,
   },
@@ -256,6 +318,18 @@ const styles = StyleSheet.create({
     ...THEME.text.amount,
     fontSize: 17,
     marginTop: 2,
+  },
+  budgetCard: {
+    marginTop: THEME.space.xl,
+    padding: THEME.space.lg,
+    borderRadius: THEME.radius.md,
+    backgroundColor: THEME.colors.elevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: THEME.colors.hairline,
+  },
+  budgetTitle: {
+    ...THEME.text.small,
+    fontFamily: THEME.fonts.medium,
   },
   split: {
     marginTop: THEME.space.xl,

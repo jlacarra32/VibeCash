@@ -1,4 +1,20 @@
-export const calculateCashFlow = (transactions, filterType = 'all') => {
+/** Lo que de verdad te cuesta un gasto: el importe menos lo que te devuelven. */
+export const netExpense = (t) => (Number(t.amount) || 0) - (Number(t.refundAmount) || 0);
+
+/**
+ * ¿Cae el movimiento en el periodo actual ('week' | 'month' | 'year' | 'all')?
+ * Los movimientos sin fecha válida solo cuentan en 'all'.
+ */
+export const inPeriod = (t, filterType, now = new Date()) => {
+  if (filterType === 'all') return true;
+  const range = getPeriodRange(filterType, 0, now);
+  if (!range) return true;
+  if (!t.date) return false;
+  const d = new Date(t.date);
+  return d >= range.start && d <= range.end;
+};
+
+export const calculateCashFlow = (transactions, filterType = 'all', now = new Date()) => {
   let totalIncomeRaw = 0; // Ingresos puros (sueldo, etc)
   let totalExpenseRaw = 0; // Gasto total que sale de la cuenta
   let totalRefunds = 0; // Lo que te deben/devuelven
@@ -11,35 +27,7 @@ export const calculateCashFlow = (transactions, filterType = 'all') => {
     income: { card: 0, cash: 0, none: 0 },
   };
   
-  const now = new Date();
-
-  // Filter Transactions by Time Period
-  const filteredTransactions = transactions.filter(t => {
-    if (filterType === 'all') return true;
-    if (!t.date) return true;
-
-    const txDate = new Date(t.date);
-    if (filterType === 'week') {
-      const d = new Date(now);
-      const day = d.getDay();
-      const diff = d.getDate() - (day === 0 ? 6 : day - 1);
-      const monday = new Date(d.setDate(diff));
-      monday.setHours(0, 0, 0, 0);
-      
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
-      
-      return txDate >= monday && txDate <= sunday;
-    }
-    if (filterType === 'month') {
-      return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
-    }
-    if (filterType === 'year') {
-      return txDate.getFullYear() === now.getFullYear();
-    }
-    return true;
-  });
+  const filteredTransactions = transactions.filter(t => inPeriod(t, filterType, now));
 
   const processedTransactions = filteredTransactions.map(t => {
     let amount = Number(t.amount) || 0;
@@ -122,9 +110,7 @@ export const expenseBetween = (transactions, start, end, net = true) =>
     if (t.type === 'income' || !t.date) return sum;
     const d = new Date(t.date);
     if (d < start || d > end) return sum;
-    const amount = Number(t.amount) || 0;
-    const refund = net ? (Number(t.refundAmount) || 0) : 0;
-    return sum + (amount - refund);
+    return sum + (net ? netExpense(t) : (Number(t.amount) || 0));
   }, 0);
 
 /**

@@ -11,6 +11,7 @@ import { showAlert } from '../logic/dialogs';
 import { formatMoney } from '../logic/format';
 import Sheet from './Sheet';
 import Segmented from './Segmented';
+import { FREQUENCIES } from '../logic/recurring';
 
 const TYPES = [
   { key: 'expense', label: 'Gasto' },
@@ -36,6 +37,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
   const [isShared, setIsShared] = useState(false);
   const [myPart, setMyPart] = useState('');
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [repeat, setRepeat] = useState(null); // null | 'weekly' | 'monthly' | 'yearly' (solo movimientos nuevos)
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const amountRef = useRef(null);
@@ -47,7 +49,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       setDescription(initialData.description || '');
       setAmount(initialData.amount != null ? String(initialData.amount) : '');
       setType(txType);
-      setCategory(txType === 'income' ? 'Ingreso' : (initialData.category || ''));
+      setCategory(txType === 'income' ? (initialData.category || 'Ingreso') : (initialData.category || ''));
       setIsShared(!!initialData.isShared);
       setMyPart(initialData.myPart != null ? String(initialData.myPart) : '');
       setPaymentMethod(initialData.paymentMethod === 'card' || initialData.paymentMethod === 'cash' ? initialData.paymentMethod : null);
@@ -99,7 +101,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
       return;
     }
     const refund = (type === 'expense' && isShared) ? Math.max(0, totalAmount - myPartValue) : 0;
-    const finalCategory = type === 'income' ? 'Ingreso' : category;
+    const finalCategory = type === 'income' ? (category || 'Ingreso') : category;
 
     // Mismo formato de siempre; si no hay nota, se usa el nombre de la categoría
     const newTx = {
@@ -116,7 +118,9 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     // Campo nuevo y opcional: los movimientos sin forma de pago quedan igual que siempre
     if (paymentMethod) newTx.paymentMethod = paymentMethod;
 
-    onSave(newTx);
+    // La repetición solo se ofrece al crear (no al editar) y no con gastos compartidos
+    const repeatChoice = !initialData && !(type === 'expense' && isShared) ? repeat : null;
+    onSave(newTx, repeatChoice);
     onClose();
   };
 
@@ -126,9 +130,15 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setIsShared(false);
     setMyPart('');
     setPaymentMethod(null);
+    setRepeat(null);
     setDate(defaultDate && isValidDate(defaultDate) ? new Date(defaultDate) : new Date());
     setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
+
+  // "Ingreso" es la categoría general de siempre; las tuyas van detrás
+  const chipCategories = type === 'income'
+    ? [{ id: 'Ingreso', color: THEME.colors.income, icon: 'cash-outline' }, ...(incomeCategories || [])]
+    : (categories || []);
 
   const title = initialData ? 'Editar movimiento' : type === 'income' ? 'Nuevo ingreso' : 'Nuevo gasto';
   const parsedAmount = parseFloat((amount || '0').replace(',', '.')) || 0;
@@ -163,8 +173,8 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
           <Text style={[styles.amountCurrency, type === 'income' && { color: THEME.colors.income }]}>€</Text>
         </View>
 
-        {/* Categoría */}
-        {type === 'expense' && (
+        {/* Categoría (en ingresos solo si has creado categorías de ingreso) */}
+        {(type === 'expense' || (incomeCategories || []).length > 0) && (
           <>
             <Text style={styles.label}>Categoría</Text>
             <ScrollView
@@ -173,7 +183,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
               contentContainerStyle={styles.chipRow}
               keyboardShouldPersistTaps="handled"
             >
-              {(categories || []).map(cat => {
+              {chipCategories.map(cat => {
                 const active = category === cat.id;
                 return (
                   <TouchableOpacity
@@ -283,6 +293,30 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
               if (event?.type !== 'dismissed' && selectedDate) setDate(selectedDate);
             }}
           />
+        )}
+
+        {/* Repetir (solo movimientos nuevos, y no si es compartido) */}
+        {!initialData && !(type === 'expense' && isShared) && (
+          <>
+            <Text style={styles.label}>Repetir <Text style={styles.optional}>· opcional</Text></Text>
+            <View style={styles.dateRow}>
+              {[{ key: null, label: 'No' }, ...FREQUENCIES].map(f => {
+                const active = repeat === f.key;
+                return (
+                  <TouchableOpacity
+                    key={String(f.key)}
+                    style={[styles.dateChip, active && styles.dateChipActive]}
+                    onPress={() => setRepeat(f.key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.dateChipText, active && styles.dateChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {repeat && <Text style={styles.repeatHint}>Se apuntará solo cuando toque. Lo gestionas en Ajustes.</Text>}
+          </>
         )}
 
         {/* Gasto compartido */}
@@ -471,6 +505,10 @@ const styles = StyleSheet.create({
     ...THEME.text.amount,
     color: THEME.colors.inkSoft,
     marginLeft: 4,
+  },
+  repeatHint: {
+    ...THEME.text.small,
+    marginTop: THEME.space.sm,
   },
   partHint: {
     ...THEME.text.small,

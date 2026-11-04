@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated, KeyboardAvoidingView, ScrollView } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated, KeyboardAvoidingView, ScrollView, AppState } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
+import { loadData, saveData, clearAllData, requestPersistence } from './src/logic/storage';
+import { isBackupDue } from './src/logic/backupReminder';
+import { renameCategoryInState } from './src/logic/categories';
+import { EMPTY_BUDGETS, normalizeBudgets } from './src/logic/budget';
+import { generateDue, isValidTemplate, templateFromTransaction, frequencyLabel } from './src/logic/recurring';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -20,55 +24,16 @@ import MovementsScreen from './src/screens/MovementsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AddTransactionModal from './src/components/AddTransactionModal';
 import TransactionSheet from './src/components/TransactionSheet';
+import UndoToast from './src/components/UndoToast';
 import { showAlert, confirmAction } from './src/logic/dialogs';
 import { fromLocalDateKey } from './src/logic/dates';
 import { withDisplayColors } from './src/logic/helpers';
 
-// Memoria de emergencia por si el móvil bloquea el almacenamiento
-let backupStorage = {};
-
-const saveData = async (key, val) => {
-  try {
-    const jsonValue = JSON.stringify(val);
-    backupStorage[key] = jsonValue; // Guardamos en memoria por si acaso
-    
-    // DOBLE GUARDADO EXTREMO EN WEB: Usar localStorage directo como salvavidas
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(key, jsonValue);
-    }
-
-    if (AsyncStorage && typeof AsyncStorage.setItem === 'function') {
-      await AsyncStorage.setItem(key, jsonValue);
-    }
-  } catch (error) {
-    console.log("Aviso: Error de guardado principal, usando memoria temporal", error);
-  }
-};
-
-const loadData = async (key) => {
-  try {
-    let res = null;
-    if (AsyncStorage && typeof AsyncStorage.getItem === 'function') {
-      res = await AsyncStorage.getItem(key);
-    }
-
-    // RESCATE EN WEB: Si AsyncStorage está vacío o falla, leer de localStorage directo
-    if (!res && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-      res = window.localStorage.getItem(key);
-    }
-
-    if (res) return JSON.parse(res);
-    return backupStorage[key] ? JSON.parse(backupStorage[key]) : null;
-  } catch (error) {
-    console.log("Error crítico leyendo datos, intentando rescate", error);
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-      let fallback = window.localStorage.getItem(key);
-      if (fallback) return JSON.parse(fallback);
-    }
-    return backupStorage[key] ? JSON.parse(backupStorage[key]) : null;
-  }
-};
-
+// Formas esperadas de lo guardado: si algo no encaja, storage.js lo aparta
+// en "<clave>_corrupt" en vez de dejar que rompa la app.
+const isObjectList = (v) => Array.isArray(v) && v.every(x => x && typeof x === 'object');
+const isTransactionList = (v) => isObjectList(v) && v.every(x => x.id != null);
+const isCategoryList = (v) => isObjectList(v) && v.every(x => typeof x.id === 'string');
 
 // Pestañas de la barra inferior
 const TABS = [
@@ -110,21 +75,39 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [categories, setCategories] = useState(CATEGORIES);
   const [incomeCategories, setIncomeCategories] = useState(INCOME_CATEGORIES);
+  const [lastBackupAt, setLastBackupAt] = useState(null); // clave nueva: last_backup_at
+  const [backupNudgeHidden, setBackupNudgeHidden] = useState(false);
+  const [recurring, setRecurring] = useState([]); // clave nueva: user_recurring
+  const [budgets, setBudgets] = useState(EMPTY_BUDGETS); // clave nueva: user_budgets
+  // Aviso con "Deshacer" (borrados, importaciones, recurrentes…)
+  const [toast, setToast] = useState(null);
+  const dismissToast = useCallback(() => setToast(null), []);
+  const showUndo = useCallback((message, onUndo) => setToast({ id: Date.now(), message, onUndo }), []);
   const [isLoaded, setIsLoaded] = useState(false); // Bandera para evitar guardados basura antes de cargar
 
   useEffect(() => {
+    requestPersistence();
     Promise.all([
-      loadData('user_transactions'),
-      loadData('user_name'),
-      loadData('user_categories'),
-      loadData('user_income_categories'),
-      loadData('has_seen_welcome')
-    ]).then(([txs, name, cats, incCats, seen]) => {
+      loadData('user_transactions', isTransactionList),
+      loadData('user_name', (v) => typeof v === 'string'),
+      loadData('user_categories', isCategoryList),
+      loadData('user_income_categories', isCategoryList),
+      loadData('has_seen_welcome', (v) => typeof v === 'boolean'),
+      loadData('last_backup_at', (v) => typeof v === 'number'),
+      loadData('user_recurring', (v) => Array.isArray(v) && v.every(x => x && typeof x === 'object')),
+      loadData('user_budgets', (v) => !!v && typeof v === 'object' && !Array.isArray(v)),
+    ]).then(([txs, name, cats, incCats, seen, backupAt, recList, budgetData]) => {
+      if (budgetData) setBudgets(normalizeBudgets(budgetData));
+      if (backupAt) setLastBackupAt(backupAt);
+      if (recList) setRecurring(recList.filter(isValidTemplate));
       if (txs) setTransactions(txs);
       if (name) setUserName(name);
       if (cats) setCategories(cats);
       if (incCats) setIncomeCategories(incCats);
       if (seen) setHasSeenWelcome(seen);
+    }).catch((e) => {
+      console.log('Error cargando datos', e);
+    }).finally(() => {
       setIsLoaded(true); // Ya podemos guardar de forma segura
     });
   }, []);
@@ -155,19 +138,82 @@ export default function App() {
     saveData('has_seen_welcome', hasSeenWelcome);
   }, [hasSeenWelcome, isLoaded]);
 
+  useEffect(() => {
+    if (!isLoaded) return;
+    saveData('user_recurring', recurring);
+  }, [recurring, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    saveData('user_budgets', budgets);
+  }, [budgets, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded || lastBackupAt == null) return;
+    saveData('last_backup_at', lastBackupAt);
+  }, [lastBackupAt, isLoaded]);
+
+  // Movimientos recurrentes: al abrir y al volver a la app se apuntan los que
+  // ya tocan (nunca los futuros). Es idempotente: no duplica ni resucita lo borrado.
+  const transactionsRef = useRef(transactions);
+  const recurringRef = useRef(recurring);
+  useEffect(() => { transactionsRef.current = transactions; recurringRef.current = recurring; });
+
+  const runRecurring = useCallback(() => {
+    const result = generateDue(recurringRef.current, transactionsRef.current, new Date());
+    if (!result.changed) return;
+    recurringRef.current = result.templates;
+    setRecurring(result.templates);
+    const created = result.transactions;
+    if (created.length === 0) return;
+    transactionsRef.current = [...transactionsRef.current, ...created];
+    setTransactions(prev => {
+      const have = new Set(prev.map(t => t.id));
+      return [...prev, ...created.filter(t => !have.has(t.id))];
+    });
+    const ids = created.map(t => t.id);
+    const n = created.length;
+    showUndo(
+      `${n} movimiento${n === 1 ? '' : 's'} recurrente${n === 1 ? '' : 's'} apuntado${n === 1 ? '' : 's'}`,
+      () => setTransactions(prev => prev.filter(t => !ids.includes(t.id)))
+    );
+  }, [showUndo]);
+
+  useEffect(() => {
+    if (isLoaded) runRecurring();
+  }, [isLoaded, recurring, runRecurring]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') runRecurring(); });
+    return () => sub.remove();
+  }, [runRecurring]);
+
   // Categorías con los colores de la paleta nueva, solo para pintarlas.
   // Lo guardado (categories) no cambia.
   const displayCategories = useMemo(() => withDisplayColors(categories), [categories]);
   const displayIncomeCategories = useMemo(() => withDisplayColors(incomeCategories), [incomeCategories]);
 
-  const handleSaveTransaction = (tx) => {
+  // repeat: 'weekly' | 'monthly' | 'yearly' | null. Con repetición, además del
+  // movimiento se crea una plantilla; las siguientes repeticiones se apuntan solas.
+  const handleSaveTransaction = (tx, repeat) => {
+    let toSave = tx;
+    let template = null;
+    if (repeat && !editingTransaction) {
+      const id = `rec${Date.now()}`;
+      toSave = { ...tx, recurringId: id };
+      template = templateFromTransaction(toSave, repeat, id);
+    }
     setTransactions(prev => {
-      const exists = prev.find(t => t.id === tx.id);
+      const exists = prev.find(t => t.id === toSave.id);
       if (exists) {
-        return prev.map(t => t.id === tx.id ? tx : t);
+        return prev.map(t => t.id === toSave.id ? toSave : t);
       }
-      return [...prev, tx];
+      return [...prev, toSave];
     });
+    if (template) {
+      setRecurring(prev => [...prev, template]);
+      showUndo(`Se repetirá ${frequencyLabel(repeat)}`, () => setRecurring(prev => prev.filter(r => r.id !== template.id)));
+    }
     setEditingTransaction(null);
   };
 
@@ -196,16 +242,14 @@ export default function App() {
 
   const handleFullReset = async () => {
     try {
-      // Limpiar todas las capas de persistencia para asegurar un reinicio limpio
-      backupStorage = {};
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.clear();
-      }
-      await AsyncStorage.clear();
+      await clearAllData();
       setTransactions([]);
       setUserName(null);
       setTempUserName('');
       setHasSeenWelcome(false);
+      setLastBackupAt(null);
+      setRecurring([]);
+      setBudgets(EMPTY_BUDGETS);
       setCategories(CATEGORIES);
       setIncomeCategories(INCOME_CATEGORIES);
       setCurrentScreen('DataEntry');
@@ -245,13 +289,25 @@ export default function App() {
       'Importar datos',
       `La copia${dateText} tiene ${count} movimiento${count === 1 ? '' : 's'}.${replaceText} ¿Continuar?`,
       () => {
+        // Lo de antes se guarda en memoria para poder deshacer la importación
+        const before = { transactions, categories, incomeCategories, userName, hasSeenWelcome, recurring, budgets };
         setTransactions(d.user_transactions);
         if (d.user_categories) setCategories(d.user_categories);
         if (d.user_income_categories) setIncomeCategories(d.user_income_categories);
+        if (d.user_recurring) setRecurring(d.user_recurring.filter(isValidTemplate));
+        if (d.user_budgets) setBudgets(normalizeBudgets(d.user_budgets));
         const name = d.user_name || userName || tempUserName.trim();
         if (name) setUserName(name);
         setHasSeenWelcome(true);
-        showAlert('Datos recuperados', 'Tus datos se han importado correctamente.');
+        showUndo('Datos importados', () => {
+          setTransactions(before.transactions);
+          setCategories(before.categories);
+          setIncomeCategories(before.incomeCategories);
+          if (before.userName) setUserName(before.userName);
+          setHasSeenWelcome(before.hasSeenWelcome);
+          setRecurring(before.recurring);
+          setBudgets(before.budgets);
+        });
       },
       'Importar'
     );
@@ -266,16 +322,47 @@ export default function App() {
     setTimeout(() => openEditModal(tx), Platform.OS === 'ios' ? 350 : 0);
   };
 
+  // Borra al instante y deja 6 segundos para deshacer (vuelve a su sitio)
   const deleteFromDetail = (tx) => {
-    confirmAction(
-      'Borrar movimiento',
-      '¿Seguro que quieres borrar este movimiento?',
-      () => {
-        setTransactions(prev => prev.filter(t => t.id !== tx.id));
-        setDetailTx(null);
-      },
-      'Borrar'
-    );
+    const index = transactions.findIndex(t => t.id === tx.id);
+    setTransactions(prev => prev.filter(t => t.id !== tx.id));
+    setDetailTx(null);
+    showUndo('Movimiento borrado', () => {
+      setTransactions(prev => {
+        if (prev.some(t => t.id === tx.id)) return prev;
+        const next = [...prev];
+        next.splice(Math.min(Math.max(index, 0), next.length), 0, tx);
+        return next;
+      });
+    });
+  };
+
+  // Renombra una categoría y actualiza a la vez todos los movimientos que la
+  // usan. Se puede deshacer. Devuelve { error } si el nombre no vale.
+  const handleRenameCategory = (kind, oldId, newId) => {
+    const before = { transactions, categories, incomeCategories, recurring, budgets };
+    const result = renameCategoryInState(before, kind, oldId, newId);
+    if (result.error) return result;
+    setTransactions(result.state.transactions);
+    setCategories(result.state.categories);
+    setIncomeCategories(result.state.incomeCategories);
+    setRecurring(result.state.recurring);
+    setBudgets(result.state.budgets);
+    showUndo(`Categoría renombrada a «${newId.trim()}»`, () => {
+      setTransactions(before.transactions);
+      setCategories(before.categories);
+      setIncomeCategories(before.incomeCategories);
+      setRecurring(before.recurring);
+      setBudgets(before.budgets);
+    });
+    return {};
+  };
+
+  const clearTransactions = () => {
+    const before = transactions;
+    if (before.length === 0) return;
+    setTransactions([]);
+    showUndo(`${before.length} movimientos borrados`, () => setTransactions(before));
   };
 
   // Mientras cargan las fuentes se muestra solo el fondo (evita un parpadeo
@@ -303,6 +390,10 @@ export default function App() {
                   onOpen={setDetailTx}
                   onAdd={() => openAddModal()}
                   onGoToHistory={() => { setMovementsView('list'); navigate('Movements'); }}
+                  backupDue={!backupNudgeHidden && isBackupDue({ lastBackupAt, transactionCount: transactions.length })}
+                  onBackupNow={() => navigate('Profile')}
+                  onBackupLater={() => setBackupNudgeHidden(true)}
+                  budgets={budgets}
                 />
               : currentScreen === 'Charts'
               ? <ChartsScreen transactions={transactions} categories={displayCategories} />
@@ -320,11 +411,23 @@ export default function App() {
               : <ProfileScreen
                   userName={userName}
                   setUserName={setUserName}
-                  setTransactions={setTransactions}
+                  onClearTransactions={clearTransactions}
                   categories={displayCategories}
                   setCategories={setCategories}
+                  incomeCategories={displayIncomeCategories}
+                  setIncomeCategories={setIncomeCategories}
+                  onRenameCategory={handleRenameCategory}
+                  recurring={recurring}
+                  budgets={budgets}
+                  setBudgets={setBudgets}
+                  onUpdateRecurring={(id, patch) => setRecurring(prev => prev.map(r => (r.id === id ? (typeof patch === 'function' ? patch(r) : { ...r, ...patch }) : r)))}
+                  onDeleteRecurring={(id) => setRecurring(prev => prev.filter(r => r.id !== id))}
                   onFullReset={handleFullReset}
-                  onExport={() => exportBackup({ transactions, userName, categories, incomeCategories })}
+                  onExport={async () => {
+                    const result = await exportBackup({ transactions, userName, categories, incomeCategories, recurring, budgets });
+                    if (result !== 'cancelled') setLastBackupAt(Date.now());
+                    return result;
+                  }}
                   onImport={handleImport}
                 />
             }
@@ -434,6 +537,7 @@ export default function App() {
           categories={displayCategories}
           incomeCategories={displayIncomeCategories}
         />
+        <UndoToast toast={toast} onDismiss={dismissToast} />
         {Platform.OS === 'web' && <Analytics />}
         {Platform.OS === 'web' && <SpeedInsights />}
       </SafeAreaView>

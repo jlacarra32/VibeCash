@@ -9,7 +9,7 @@ import { toLocalDateKey } from './dates';
 
 const BACKUP_FORMAT = 1;
 
-export const buildBackup = ({ transactions, userName, categories, incomeCategories }) => ({
+export const buildBackup = ({ transactions, userName, categories, incomeCategories, recurring, budgets }) => ({
   app: 'VibeCash',
   format: BACKUP_FORMAT,
   exportedAt: new Date().toISOString(),
@@ -18,6 +18,9 @@ export const buildBackup = ({ transactions, userName, categories, incomeCategori
     user_name: userName,
     user_categories: categories,
     user_income_categories: incomeCategories,
+    // Campos añadidos después: solo van si existen, así las copias antiguas siguen siendo válidas
+    ...(recurring ? { user_recurring: recurring } : {}),
+    ...(budgets ? { user_budgets: budgets } : {}),
   },
 });
 
@@ -103,5 +106,7 @@ export const parseBackup = (text) => {
   if (d.user_categories != null && !isCategoryList(d.user_categories)) return null;
   if (d.user_income_categories != null && !isCategoryList(d.user_income_categories)) return null;
   if (d.user_name != null && typeof d.user_name !== 'string') return null;
+  if (d.user_recurring != null && !(Array.isArray(d.user_recurring) && d.user_recurring.every(r => r && typeof r === 'object'))) return null;
+  if (d.user_budgets != null && (typeof d.user_budgets !== 'object' || Array.isArray(d.user_budgets))) return null;
   return backup;
 };

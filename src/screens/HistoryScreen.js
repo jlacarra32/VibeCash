@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { sortByDateDesc, groupByDay } from '../logic/helpers';
 import { formatMoney, formatDayLabel } from '../logic/format';
+import { netExpense } from '../logic/cashFlow';
 import TransactionRow from '../components/TransactionRow';
 import EmptyState from '../components/EmptyState';
 
@@ -30,7 +31,7 @@ export default function HistoryScreen({ transactions, categories, incomeCategori
   }, [transactions, search, typeFilter, selectedCategory]);
 
   const filteredIncome = filteredTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const filteredExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+  const filteredExpense = filteredTransactions.filter(t => t.type !== 'income').reduce((s, t) => s + netExpense(t), 0);
 
   const groups = groupByDay(filteredTransactions.slice(0, limit));
   const count = filteredTransactions.length;
