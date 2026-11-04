@@ -23,6 +23,7 @@ export default function TransactionRow({ tx, categories, incomeCategories, onPre
   if (!isIncome && tx.isShared && tx.myPart != null && Number(tx.myPart) < amount) {
     meta.push(`tu parte ${formatMoney(tx.myPart)}`);
   }
+  if (tx.recurringId) meta.push('recurrente');
   if (showDate) meta.push(formatDateShort(tx.date));
 
   return (

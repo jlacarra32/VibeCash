@@ -6,6 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME, CATEGORY_COLORS as COLORS } from '../constants/theme';
 import { showAlert, confirmAction } from '../logic/dialogs';
 import appConfig from '../../app.json';
+import { formatMoney, formatDateShort } from '../logic/format';
+import { fromLocalDateKey } from '../logic/dates';
+import { nextDueKey, frequencyLabel, resumeTemplate } from '../logic/recurring';
 import ScreenHeader from '../components/ScreenHeader';
 import Sheet from '../components/Sheet';
 
@@ -84,6 +87,7 @@ const NAME_ERRORS = {
 export default function ProfileScreen({
   userName, setUserName, onClearTransactions,
   categories, setCategories, incomeCategories, setIncomeCategories, onRenameCategory,
+  recurring, onUpdateRecurring, onDeleteRecurring,
   onFullReset, onExport, onImport,
 }) {
   const [tempName, setTempName] = useState(userName || '');
@@ -93,7 +97,44 @@ export default function ProfileScreen({
   const [catName, setCatName] = useState('');
   const [catColor, setCatColor] = useState(COLORS[0]);
 
+  // Hoja de un movimiento recurrente (id) y su importe en edición
+  const [recId, setRecId] = useState(null);
+  const [recAmount, setRecAmount] = useState('');
+  const recList = recurring || [];
+  const editingRec = recList.find(r => r.id === recId) || null;
+
   useEffect(() => { setTempName(userName || ''); }, [userName]);
+
+  const openRec = (r) => { setRecAmount(String(r.amount).replace('.', ',')); setRecId(r.id); };
+  const recName = (r) => r.description || r.category || 'Sin nombre';
+  const recWhen = (r) => {
+    if (!r.active) return 'en pausa';
+    const key = nextDueKey(r);
+    const date = key ? fromLocalDateKey(key) : null;
+    return date ? `próximo ${formatDateShort(date)}` : '';
+  };
+  const saveRec = () => {
+    if (!editingRec) return;
+    const value = parseFloat(recAmount.replace(',', '.'));
+    if (!value || value <= 0) { showAlert('Importe no válido', 'El importe tiene que ser mayor que 0.'); return; }
+    if (value !== editingRec.amount) onUpdateRecurring(editingRec.id, { amount: value });
+    setRecId(null);
+  };
+  const toggleRec = () => {
+    if (!editingRec) return;
+    onUpdateRecurring(editingRec.id, editingRec.active ? { active: false } : (r) => resumeTemplate(r));
+    setRecId(null);
+  };
+  const deleteRec = () => {
+    if (!editingRec) return;
+    const id = editingRec.id;
+    confirmAction(
+      'Dejar de repetir',
+      `Se dejará de apuntar «${recName(editingRec)}». Los movimientos que ya se apuntaron no se borran.`,
+      () => { onDeleteRecurring(id); setRecId(null); },
+      'Dejar de repetir'
+    );
+  };
 
   // El nombre se guarda al salir del campo; si se deja vacío, se recupera
   const commitName = () => {
@@ -239,6 +280,41 @@ export default function ProfileScreen({
         {renderCategoryRows('income')}
         <Text style={styles.groupNote}>Opcionales. Si no creas ninguna, todos los ingresos se apuntan como «Ingreso».</Text>
 
+        {/* Movimientos recurrentes */}
+        <Text style={styles.groupLabel}>Movimientos recurrentes</Text>
+        <View style={styles.group}>
+          {recList.length === 0 && (
+            <View style={[styles.row, styles.rowLast]}>
+              <Text style={styles.rowSub}>Todavía no tienes ninguno</Text>
+            </View>
+          )}
+          {recList.map((r, i) => {
+            const list = r.type === 'income' ? incomeCategories : categories;
+            const cat = (list || []).find(c => c.id === r.category);
+            const color = cat ? cat.color : THEME.colors.inkFaint;
+            return (
+              <TouchableOpacity
+                key={r.id}
+                style={[styles.row, i === recList.length - 1 && styles.rowLast]}
+                onPress={() => openRec(r)}
+                activeOpacity={0.6}
+              >
+                <View style={[styles.catIcon, { backgroundColor: color + '1F' }]}>
+                  <Ionicons name={(cat && cat.icon) || 'repeat-outline'} size={16} color={color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>{recName(r)}</Text>
+                  <Text style={styles.rowSub} numberOfLines={1}>
+                    {formatMoney(r.type === 'income' ? r.amount : -r.amount)} · {frequencyLabel(r.frequency)} · {recWhen(r)}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={THEME.colors.inkFaint} />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.groupNote}>Al crear un movimiento nuevo, elige «Repetir» y se apuntará solo cuando toque.</Text>
+
         {/* Datos */}
         <Text style={styles.groupLabel}>Tus datos</Text>
         <View style={styles.group}>
@@ -315,6 +391,36 @@ export default function ProfileScreen({
 
         <Text style={styles.colophon}>VibeCash</Text>
       </ScrollView>
+
+      {/* Hoja: movimiento recurrente */}
+      <Sheet visible={!!editingRec} onClose={() => setRecId(null)}>
+        {editingRec && (
+          <View>
+            <Text style={styles.sheetTitle}>{recName(editingRec)}</Text>
+            <Text style={styles.sheetHint}>{frequencyLabel(editingRec.frequency)} · {recWhen(editingRec)}</Text>
+            <Text style={styles.sheetLabel}>Importe</Text>
+            <TextInput
+              style={styles.sheetInput}
+              keyboardType="decimal-pad"
+              value={recAmount}
+              onChangeText={(v) => { if (/^\d*[.,]?\d*$/.test(v)) setRecAmount(v); }}
+              accessibilityLabel="Importe del recurrente"
+            />
+            <Text style={styles.sheetHint}>El cambio vale para las próximas repeticiones, no para las ya apuntadas.</Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={saveRec}>
+              <Text style={styles.primaryBtnText}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteLink} onPress={toggleRec}>
+              <Text style={[styles.deleteLinkText, { color: THEME.colors.ink }]}>
+                {editingRec.active ? 'Pausar' : 'Reanudar'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.deleteLink, { marginTop: 0 }]} onPress={deleteRec}>
+              <Text style={styles.deleteLinkText}>Dejar de repetir</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Sheet>
 
       {/* Hoja: nueva categoría / editar categoría */}
       <Sheet visible={!!sheet} onClose={closeSheet}>

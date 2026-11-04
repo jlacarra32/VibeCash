@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text, StatusBar, Platform, TextInput, Animated, KeyboardAvoidingView, ScrollView, AppState } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
@@ -8,6 +8,7 @@ import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
 import { loadData, saveData, clearAllData, requestPersistence } from './src/logic/storage';
 import { isBackupDue } from './src/logic/backupReminder';
 import { renameCategoryInState } from './src/logic/categories';
+import { generateDue, isValidTemplate, templateFromTransaction, frequencyLabel } from './src/logic/recurring';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -75,6 +76,11 @@ export default function App() {
   const [incomeCategories, setIncomeCategories] = useState(INCOME_CATEGORIES);
   const [lastBackupAt, setLastBackupAt] = useState(null); // clave nueva: last_backup_at
   const [backupNudgeHidden, setBackupNudgeHidden] = useState(false);
+  const [recurring, setRecurring] = useState([]); // clave nueva: user_recurring
+  // Aviso con "Deshacer" (borrados, importaciones, recurrentes…)
+  const [toast, setToast] = useState(null);
+  const dismissToast = useCallback(() => setToast(null), []);
+  const showUndo = useCallback((message, onUndo) => setToast({ id: Date.now(), message, onUndo }), []);
   const [isLoaded, setIsLoaded] = useState(false); // Bandera para evitar guardados basura antes de cargar
 
   useEffect(() => {
@@ -86,8 +92,10 @@ export default function App() {
       loadData('user_income_categories', isCategoryList),
       loadData('has_seen_welcome', (v) => typeof v === 'boolean'),
       loadData('last_backup_at', (v) => typeof v === 'number'),
-    ]).then(([txs, name, cats, incCats, seen, backupAt]) => {
+      loadData('user_recurring', (v) => Array.isArray(v) && v.every(x => x && typeof x === 'object')),
+    ]).then(([txs, name, cats, incCats, seen, backupAt, recList]) => {
       if (backupAt) setLastBackupAt(backupAt);
+      if (recList) setRecurring(recList.filter(isValidTemplate));
       if (txs) setTransactions(txs);
       if (name) setUserName(name);
       if (cats) setCategories(cats);
@@ -127,23 +135,76 @@ export default function App() {
   }, [hasSeenWelcome, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    saveData('user_recurring', recurring);
+  }, [recurring, isLoaded]);
+
+  useEffect(() => {
     if (!isLoaded || lastBackupAt == null) return;
     saveData('last_backup_at', lastBackupAt);
   }, [lastBackupAt, isLoaded]);
+
+  // Movimientos recurrentes: al abrir y al volver a la app se apuntan los que
+  // ya tocan (nunca los futuros). Es idempotente: no duplica ni resucita lo borrado.
+  const transactionsRef = useRef(transactions);
+  const recurringRef = useRef(recurring);
+  useEffect(() => { transactionsRef.current = transactions; recurringRef.current = recurring; });
+
+  const runRecurring = useCallback(() => {
+    const result = generateDue(recurringRef.current, transactionsRef.current, new Date());
+    if (!result.changed) return;
+    recurringRef.current = result.templates;
+    setRecurring(result.templates);
+    const created = result.transactions;
+    if (created.length === 0) return;
+    transactionsRef.current = [...transactionsRef.current, ...created];
+    setTransactions(prev => {
+      const have = new Set(prev.map(t => t.id));
+      return [...prev, ...created.filter(t => !have.has(t.id))];
+    });
+    const ids = created.map(t => t.id);
+    const n = created.length;
+    showUndo(
+      `${n} movimiento${n === 1 ? '' : 's'} recurrente${n === 1 ? '' : 's'} apuntado${n === 1 ? '' : 's'}`,
+      () => setTransactions(prev => prev.filter(t => !ids.includes(t.id)))
+    );
+  }, [showUndo]);
+
+  useEffect(() => {
+    if (isLoaded) runRecurring();
+  }, [isLoaded, recurring, runRecurring]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') runRecurring(); });
+    return () => sub.remove();
+  }, [runRecurring]);
 
   // Categorías con los colores de la paleta nueva, solo para pintarlas.
   // Lo guardado (categories) no cambia.
   const displayCategories = useMemo(() => withDisplayColors(categories), [categories]);
   const displayIncomeCategories = useMemo(() => withDisplayColors(incomeCategories), [incomeCategories]);
 
-  const handleSaveTransaction = (tx) => {
+  // repeat: 'weekly' | 'monthly' | 'yearly' | null. Con repetición, además del
+  // movimiento se crea una plantilla; las siguientes repeticiones se apuntan solas.
+  const handleSaveTransaction = (tx, repeat) => {
+    let toSave = tx;
+    let template = null;
+    if (repeat && !editingTransaction) {
+      const id = `rec${Date.now()}`;
+      toSave = { ...tx, recurringId: id };
+      template = templateFromTransaction(toSave, repeat, id);
+    }
     setTransactions(prev => {
-      const exists = prev.find(t => t.id === tx.id);
+      const exists = prev.find(t => t.id === toSave.id);
       if (exists) {
-        return prev.map(t => t.id === tx.id ? tx : t);
+        return prev.map(t => t.id === toSave.id ? toSave : t);
       }
-      return [...prev, tx];
+      return [...prev, toSave];
     });
+    if (template) {
+      setRecurring(prev => [...prev, template]);
+      showUndo(`Se repetirá ${frequencyLabel(repeat)}`, () => setRecurring(prev => prev.filter(r => r.id !== template.id)));
+    }
     setEditingTransaction(null);
   };
 
@@ -178,6 +239,7 @@ export default function App() {
       setTempUserName('');
       setHasSeenWelcome(false);
       setLastBackupAt(null);
+      setRecurring([]);
       setCategories(CATEGORIES);
       setIncomeCategories(INCOME_CATEGORIES);
       setCurrentScreen('DataEntry');
@@ -218,10 +280,11 @@ export default function App() {
       `La copia${dateText} tiene ${count} movimiento${count === 1 ? '' : 's'}.${replaceText} ¿Continuar?`,
       () => {
         // Lo de antes se guarda en memoria para poder deshacer la importación
-        const before = { transactions, categories, incomeCategories, userName, hasSeenWelcome };
+        const before = { transactions, categories, incomeCategories, userName, hasSeenWelcome, recurring };
         setTransactions(d.user_transactions);
         if (d.user_categories) setCategories(d.user_categories);
         if (d.user_income_categories) setIncomeCategories(d.user_income_categories);
+        if (d.user_recurring) setRecurring(d.user_recurring.filter(isValidTemplate));
         const name = d.user_name || userName || tempUserName.trim();
         if (name) setUserName(name);
         setHasSeenWelcome(true);
@@ -231,16 +294,12 @@ export default function App() {
           setIncomeCategories(before.incomeCategories);
           if (before.userName) setUserName(before.userName);
           setHasSeenWelcome(before.hasSeenWelcome);
+          setRecurring(before.recurring);
         });
       },
       'Importar'
     );
   };
-
-  // Aviso con "Deshacer" (borrados e importaciones)
-  const [toast, setToast] = useState(null);
-  const dismissToast = useCallback(() => setToast(null), []);
-  const showUndo = (message, onUndo) => setToast({ id: Date.now(), message, onUndo });
 
   // Detalle de un movimiento (hoja con Editar / Borrar), común a todas las pantallas
   const [detailTx, setDetailTx] = useState(null);
@@ -269,16 +328,18 @@ export default function App() {
   // Renombra una categoría y actualiza a la vez todos los movimientos que la
   // usan. Se puede deshacer. Devuelve { error } si el nombre no vale.
   const handleRenameCategory = (kind, oldId, newId) => {
-    const before = { transactions, categories, incomeCategories };
+    const before = { transactions, categories, incomeCategories, recurring };
     const result = renameCategoryInState(before, kind, oldId, newId);
     if (result.error) return result;
     setTransactions(result.state.transactions);
     setCategories(result.state.categories);
     setIncomeCategories(result.state.incomeCategories);
+    setRecurring(result.state.recurring);
     showUndo(`Categoría renombrada a «${newId.trim()}»`, () => {
       setTransactions(before.transactions);
       setCategories(before.categories);
       setIncomeCategories(before.incomeCategories);
+      setRecurring(before.recurring);
     });
     return {};
   };
@@ -341,9 +402,12 @@ export default function App() {
                   incomeCategories={displayIncomeCategories}
                   setIncomeCategories={setIncomeCategories}
                   onRenameCategory={handleRenameCategory}
+                  recurring={recurring}
+                  onUpdateRecurring={(id, patch) => setRecurring(prev => prev.map(r => (r.id === id ? (typeof patch === 'function' ? patch(r) : { ...r, ...patch }) : r)))}
+                  onDeleteRecurring={(id) => setRecurring(prev => prev.filter(r => r.id !== id))}
                   onFullReset={handleFullReset}
                   onExport={async () => {
-                    const result = await exportBackup({ transactions, userName, categories, incomeCategories });
+                    const result = await exportBackup({ transactions, userName, categories, incomeCategories, recurring });
                     if (result !== 'cancelled') setLastBackupAt(Date.now());
                     return result;
                   }}

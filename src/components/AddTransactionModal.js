@@ -11,6 +11,7 @@ import { showAlert } from '../logic/dialogs';
 import { formatMoney } from '../logic/format';
 import Sheet from './Sheet';
 import Segmented from './Segmented';
+import { FREQUENCIES } from '../logic/recurring';
 
 const TYPES = [
   { key: 'expense', label: 'Gasto' },
@@ -36,6 +37,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
   const [isShared, setIsShared] = useState(false);
   const [myPart, setMyPart] = useState('');
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [repeat, setRepeat] = useState(null); // null | 'weekly' | 'monthly' | 'yearly' (solo movimientos nuevos)
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const amountRef = useRef(null);
@@ -116,7 +118,9 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     // Campo nuevo y opcional: los movimientos sin forma de pago quedan igual que siempre
     if (paymentMethod) newTx.paymentMethod = paymentMethod;
 
-    onSave(newTx);
+    // La repetición solo se ofrece al crear (no al editar) y no con gastos compartidos
+    const repeatChoice = !initialData && !(type === 'expense' && isShared) ? repeat : null;
+    onSave(newTx, repeatChoice);
     onClose();
   };
 
@@ -126,6 +130,7 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
     setIsShared(false);
     setMyPart('');
     setPaymentMethod(null);
+    setRepeat(null);
     setDate(defaultDate && isValidDate(defaultDate) ? new Date(defaultDate) : new Date());
     setCategory(type === 'expense' ? (categories[0]?.id || '') : 'Ingreso');
   };
@@ -288,6 +293,30 @@ export default function AddTransactionModal({ visible, onClose, onSave, initialD
               if (event?.type !== 'dismissed' && selectedDate) setDate(selectedDate);
             }}
           />
+        )}
+
+        {/* Repetir (solo movimientos nuevos, y no si es compartido) */}
+        {!initialData && !(type === 'expense' && isShared) && (
+          <>
+            <Text style={styles.label}>Repetir <Text style={styles.optional}>· opcional</Text></Text>
+            <View style={styles.dateRow}>
+              {[{ key: null, label: 'No' }, ...FREQUENCIES].map(f => {
+                const active = repeat === f.key;
+                return (
+                  <TouchableOpacity
+                    key={String(f.key)}
+                    style={[styles.dateChip, active && styles.dateChipActive]}
+                    onPress={() => setRepeat(f.key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.dateChipText, active && styles.dateChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {repeat && <Text style={styles.repeatHint}>Se apuntará solo cuando toque. Lo gestionas en Ajustes.</Text>}
+          </>
         )}
 
         {/* Gasto compartido */}
@@ -476,6 +505,10 @@ const styles = StyleSheet.create({
     ...THEME.text.amount,
     color: THEME.colors.inkSoft,
     marginLeft: 4,
+  },
+  repeatHint: {
+    ...THEME.text.small,
+    marginTop: THEME.space.sm,
   },
   partHint: {
     ...THEME.text.small,
