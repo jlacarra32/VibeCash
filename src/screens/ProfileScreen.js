@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME, CATEGORY_COLORS as COLORS } from '../constants/theme';
@@ -10,6 +10,10 @@ import ScreenHeader from '../components/ScreenHeader';
 import Sheet from '../components/Sheet';
 
 const APP_VERSION = appConfig.expo.version;
+
+// En iPhone, Safari puede borrar los datos de una web que no está instalada
+const isIosBrowserTab = Platform.OS === 'web' && typeof navigator !== 'undefined'
+  && /iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone;
 
 // Icono automático según el nombre de la categoría
 const ICON_MAP = {
@@ -249,6 +253,11 @@ export default function ProfileScreen({
           </TouchableOpacity>
         </View>
         <Text style={styles.groupNote}>Todo se guarda solo en este dispositivo. Nadie más puede verlo.</Text>
+        {isIosBrowserTab && (
+          <Text style={styles.groupNote}>
+            Consejo para iPhone: añade VibeCash a la pantalla de inicio (Compartir → Añadir a pantalla de inicio). Así Safari no borra tus datos si pasas varios días sin abrirla.
+          </Text>
+        )}
 
         {/* Acerca de */}
         <Text style={styles.groupLabel}>Acerca de</Text>

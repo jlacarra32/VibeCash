@@ -28,3 +28,15 @@ export const clearAllData = async () => {
   }
   await AsyncStorage.clear();
 };
+
+/**
+ * Pide al navegador que no borre los datos de VibeCash cuando falte espacio o
+ * pasen días sin abrirla. Es una petición: el navegador puede ignorarla.
+ */
+export const requestPersistence = async () => {
+  try {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      await navigator.storage.persist();
+    }
+  } catch (_e) { /* no es crítico */ }
+};

@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { exportBackup, pickBackupFile, parseBackup } from './src/logic/backup';
-import { loadData, saveData, clearAllData } from './src/logic/storage';
+import { loadData, saveData, clearAllData, requestPersistence } from './src/logic/storage';
+import { isBackupDue } from './src/logic/backupReminder';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces/400Regular_Italic';
@@ -70,16 +71,21 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [categories, setCategories] = useState(CATEGORIES);
   const [incomeCategories, setIncomeCategories] = useState(INCOME_CATEGORIES);
+  const [lastBackupAt, setLastBackupAt] = useState(null); // clave nueva: last_backup_at
+  const [backupNudgeHidden, setBackupNudgeHidden] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false); // Bandera para evitar guardados basura antes de cargar
 
   useEffect(() => {
+    requestPersistence();
     Promise.all([
       loadData('user_transactions', isTransactionList),
       loadData('user_name', (v) => typeof v === 'string'),
       loadData('user_categories', isCategoryList),
       loadData('user_income_categories', isCategoryList),
       loadData('has_seen_welcome', (v) => typeof v === 'boolean'),
-    ]).then(([txs, name, cats, incCats, seen]) => {
+      loadData('last_backup_at', (v) => typeof v === 'number'),
+    ]).then(([txs, name, cats, incCats, seen, backupAt]) => {
+      if (backupAt) setLastBackupAt(backupAt);
       if (txs) setTransactions(txs);
       if (name) setUserName(name);
       if (cats) setCategories(cats);
@@ -117,6 +123,11 @@ export default function App() {
     if (!isLoaded) return;
     saveData('has_seen_welcome', hasSeenWelcome);
   }, [hasSeenWelcome, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded || lastBackupAt == null) return;
+    saveData('last_backup_at', lastBackupAt);
+  }, [lastBackupAt, isLoaded]);
 
   // Categorías con los colores de la paleta nueva, solo para pintarlas.
   // Lo guardado (categories) no cambia.
@@ -164,6 +175,7 @@ export default function App() {
       setUserName(null);
       setTempUserName('');
       setHasSeenWelcome(false);
+      setLastBackupAt(null);
       setCategories(CATEGORIES);
       setIncomeCategories(INCOME_CATEGORIES);
       setCurrentScreen('DataEntry');
@@ -261,6 +273,9 @@ export default function App() {
                   onOpen={setDetailTx}
                   onAdd={() => openAddModal()}
                   onGoToHistory={() => { setMovementsView('list'); navigate('Movements'); }}
+                  backupDue={!backupNudgeHidden && isBackupDue({ lastBackupAt, transactionCount: transactions.length })}
+                  onBackupNow={() => navigate('Profile')}
+                  onBackupLater={() => setBackupNudgeHidden(true)}
                 />
               : currentScreen === 'Charts'
               ? <ChartsScreen transactions={transactions} categories={displayCategories} />
@@ -282,7 +297,11 @@ export default function App() {
                   categories={displayCategories}
                   setCategories={setCategories}
                   onFullReset={handleFullReset}
-                  onExport={() => exportBackup({ transactions, userName, categories, incomeCategories })}
+                  onExport={async () => {
+                    const result = await exportBackup({ transactions, userName, categories, incomeCategories });
+                    if (result !== 'cancelled') setLastBackupAt(Date.now());
+                    return result;
+                  }}
                   onImport={handleImport}
                 />
             }

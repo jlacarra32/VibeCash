@@ -21,7 +21,7 @@ const periodCaption = (filter) => {
   return 'desde el principio';
 };
 
-export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd }) {
+export default function DataEntryScreen({ transactions, userName, categories, incomeCategories, onOpen, onGoToHistory, onAdd, backupDue, onBackupNow, onBackupLater }) {
   const [timeFilter, setTimeFilter] = useState('month');
   const [showBalance, setShowBalance] = useState(true);
   const [displayBalance, setDisplayBalance] = useState(0);
@@ -86,6 +86,24 @@ export default function DataEntryScreen({ transactions, userName, categories, in
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {backupDue && (
+          <View style={styles.nudge}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={THEME.colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.nudgeTitle}>Guarda una copia de tus datos</Text>
+              <Text style={styles.nudgeText}>Solo viven en este dispositivo. Una copia te protege si algo falla.</Text>
+              <View style={styles.nudgeActions}>
+                <TouchableOpacity onPress={onBackupNow} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.link}>Hacer copia</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onBackupLater} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.nudgeLater}>Más tarde</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
         <Segmented options={PERIOD_OPTIONS} value={timeFilter} onChange={setTimeFilter} />
 
         {/* Balance */}
@@ -210,6 +228,31 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: THEME.layout.gutter,
     paddingBottom: 120,
+  },
+  nudge: {
+    flexDirection: 'row',
+    gap: THEME.space.md,
+    padding: THEME.space.lg,
+    marginBottom: THEME.space.lg,
+    borderRadius: THEME.radius.md,
+    backgroundColor: THEME.colors.sunken,
+  },
+  nudgeTitle: {
+    ...THEME.text.bodyMedium,
+  },
+  nudgeText: {
+    ...THEME.text.small,
+    marginTop: 2,
+  },
+  nudgeActions: {
+    flexDirection: 'row',
+    gap: THEME.space.xl,
+    marginTop: THEME.space.md,
+  },
+  nudgeLater: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: THEME.type.small,
+    color: THEME.colors.inkSoft,
   },
   balance: {
     marginTop: THEME.space.xl,
