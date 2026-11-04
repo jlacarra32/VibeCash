@@ -10,7 +10,8 @@
     "build": "expo export --platform web && node scripts/patch-pwa.js",
     "build:web": "expo export --platform web && node scripts/patch-pwa.js",
     "patch-pwa": "node scripts/patch-pwa.js",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "TZ=Europe/Madrid node --test \"tests/*.test.js\""
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
