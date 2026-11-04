@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { toLocalDateKey } from '../logic/dates';
+import { netExpense } from '../logic/cashFlow';
 import { formatMoney, monthName } from '../logic/format';
 import TransactionRow from '../components/TransactionRow';
 
@@ -10,7 +11,6 @@ const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const pad = (n) => String(n).padStart(2, '0');
 
 /** Lo que te cuesta un gasto (descontando lo que te devuelven). */
-const netExpense = (t) => (Number(t.amount) || 0) - (Number(t.refundAmount) || 0);
 
 /**
  * Vista "Calendario": mapa de calor del mes (cuanto más gasto, más tinta)

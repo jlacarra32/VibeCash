@@ -53,3 +53,42 @@ test('no modifica el array original', () => {
   calculateCashFlow(TXS, 'month');
   assert.equal(JSON.stringify(TXS), copy);
 });
+
+import { inPeriod, netExpense } from '../src/logic/cashFlow.js';
+
+test('netExpense: importe menos devolución', () => {
+  assert.equal(netExpense({ amount: 80, refundAmount: 60 }), 20);
+  assert.equal(netExpense({ amount: 10 }), 10);
+});
+
+test('sin fecha: solo cuenta en "Todo", no en semana/mes/año', () => {
+  const sinFecha = [{ id: 'x', amount: 10, type: 'expense', category: 'Comida' }];
+  const now = new Date(2026, 10, 4, 12);
+  assert.equal(calculateCashFlow(sinFecha, 'all', now).totalExpense, 10);
+  for (const f of ['week', 'month', 'year']) {
+    assert.equal(calculateCashFlow(sinFecha, f, now).totalExpense, 0, f);
+  }
+});
+
+test('semana que cruza de mes: incluye días de los dos meses', () => {
+  const now = new Date(2026, 9, 29, 12); // jueves 29-oct-2026; la semana acaba el domingo 1-nov
+  const txs = [
+    { id: 'a', amount: 5, type: 'expense', category: 'Comida', date: new Date(2026, 9, 27, 10).toISOString() },
+    { id: 'b', amount: 7, type: 'expense', category: 'Comida', date: new Date(2026, 10, 1, 20).toISOString() },
+    { id: 'c', amount: 9, type: 'expense', category: 'Comida', date: new Date(2026, 10, 2, 8).toISOString() },
+  ];
+  assert.equal(calculateCashFlow(txs, 'week', now).totalExpense, 12);
+});
+
+test('"Gastado" coincide entre calculateCashFlow y expenseBetween (mismo periodo)', () => {
+  const now = new Date(2026, 10, 4, 12);
+  for (const f of ['week', 'month', 'year']) {
+    const { start, end } = getPeriodRange(f, 0, now);
+    assert.equal(calculateCashFlow(TXS, f, now).totalExpenseNet, expenseBetween(TXS, start, end, true), f);
+    assert.equal(calculateCashFlow(TXS, f, now).totalExpense, expenseBetween(TXS, start, end, false), f);
+  }
+});
+
+test('inPeriod con fecha inválida no cuenta', () => {
+  assert.equal(inPeriod({ date: 'basura' }, 'month', new Date(2026, 10, 4)), false);
+});
